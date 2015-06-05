@@ -1,0 +1,20 @@
+peopledetect.cpp: In member function ‘virtual void HOGDescriptor2::computeGradient_kernel(const uchar*, int, cv::Mat&, cv::Mat&, int, int, int, int, int, int, int, int, int, int, int, const float*, int*, float*, cv::Mat&, cv::Mat&, cv::Mat&, cv::Mat&, uchar*, int, uchar*, int, int, int, int, int) const’:
+peopledetect.cpp:666:45: error: ‘it_2’ was not declared in this scope
+    for( int i = 0; i < it_2_nplanes; i++, ++it_2 )
+                                             ^
+In file included from //home/urmish/Documents/OpenCVStaticLib/include/opencv2/objdetect/objdetect.hpp:46:0,
+                 from precomp.hpp:46,
+                 from peopledetect.cpp:2:
+peopledetect.cpp: In member function ‘virtual void HOGCache2::init(const HOGDescriptor2*, const cv::Mat&, cv::Size, cv::Size, bool, cv::Size)’:
+peopledetect.cpp:826:65: error: ‘depth’ was not declared in this scope
+     CV_Assert( Dx.size == Dy.size && Dx.type() == Dy.type() && (depth == CV_32F || depth == CV_64F));
+                                                                 ^
+//home/urmish/Documents/OpenCVStaticLib/include/opencv2/core/core.hpp:223:33: note: in definition of macro ‘CV_Assert’
+ #define CV_Assert( expr ) if(!!(expr)) ; else cv::error( cv::Exception(CV_StsAssert, #expr, CV_Func, __FILE__, __LINE__) )
+                                 ^
+peopledetect.cpp:828:34: error: ‘ptrs_2’ was not declared in this scope
+     NAryMatIterator it_2(arrays, ptrs_2); //Need this
+                                  ^
+peopledetect.cpp:829:344: error: expression cannot be used as a function
+     descriptor->computeGradient_kernel(_img.data, _img.step, grad, qangle, _paddingTL.width,_paddingTL.height, _paddingBR.width,_paddingBR.height,gradsize.width, gradsize.height, cn, wholeSize.width, wholeSize.height, roiofs.x, roiofs.y, lut, xmap, dbuf,Dx , Dy, Angle, Mag, grad.data, grad.step.p[0], qangle.data, qangle.step.p[0], it_2.size(),it_2.nplanes,Dx.depth(),Dx.channels());
+                                                                                                                                                                                                                                                                                                                                                        ^

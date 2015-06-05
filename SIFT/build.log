@@ -1,0 +1,11 @@
+SIFT_descriptor.cpp: In member function ‘void SIFT2::findScaleSpaceExtrema(const std::vector<cv::Mat>&, const std::vector<cv::Mat>&, std::vector<cv::KeyPoint>&) const’:
+SIFT_descriptor.cpp:551:70: warning: format ‘%d’ expects argument of type ‘int’, but argument 2 has type ‘std::vector<temp_storage>::size_type {aka long unsigned int}’ [-Wformat=]
+  printf("Potential Keypoints size is %d\n",potential_keypoints.size());
+                                                                      ^
+SIFT_descriptor.cpp: In function ‘int main(int, char**)’:
+SIFT_descriptor.cpp:880:57: warning: format ‘%d’ expects argument of type ‘int’, but argument 2 has type ‘std::vector<cv::KeyPoint>::size_type {aka long unsigned int}’ [-Wformat=]
+   printf("Keypoints_1 size is - %d\n",keypoints_1.size());
+                                                         ^
+SIFT_descriptor.cpp:882:57: warning: format ‘%d’ expects argument of type ‘int’, but argument 2 has type ‘std::vector<cv::KeyPoint>::size_type {aka long unsigned int}’ [-Wformat=]
+   printf("Keypoints_2 size is - %d\n",keypoints_2.size());
+                                                         ^
