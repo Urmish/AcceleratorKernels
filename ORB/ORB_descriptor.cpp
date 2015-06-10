@@ -361,43 +361,37 @@ int FilterEngine2::proceed( const uchar* src, int srcstep, int count,
     //CV_Assert( wholeSize.width > 0 && wholeSize.height > 0 );
 
     const int *btab = &borderTab[0];
-    int esz = (int)getElemSize(srcType); //Input to kernel
+    int esz = (int)getElemSize(srcType); 
     int btab_esz = borderElemSize;
     uchar** brows = &rows[0];
-    int bufRows = (int)rows.size(); //Input to kernel
+    int bufRows = (int)rows.size(); 
     int cn = CV_MAT_CN(bufType);
-    int width = roi.width, kwidth = ksize.width; //Input to kernel
+    int width = roi.width, kwidth = ksize.width; 
     int kheight = ksize.height, ay = anchor.y;
     int _dx1 = dx1, _dx2 = dx2;
-    int width1 = roi.width + kwidth - 1; //Input to kernel
-    int xofs1 = std::min(roi.x, anchor.x); //Input to kernel
-    //bool isSep = isSeparable();
-    bool isSep = 0;
+    int width1 = roi.width + kwidth - 1; 
+    int xofs1 = std::min(roi.x, anchor.x); 
+    bool isSep = isSeparable();
+  
     bool makeBorder = (_dx1 > 0 || _dx2 > 0) && rowBorderType != BORDER_CONSTANT;
     int dy = 0, i = 0;
 
     src -= xofs1*esz;
-    if ( endY - startY - rowCount < count)
-	count =  endY - startY - rowCount;
-    //count = std::min(count, remainingInputRows());
+    count = std::min(count, remainingInputRows());
 
-    //CV_Assert( src && dst && count > 0 );
+    CV_Assert( src && dst && count > 0 );
 
     //printf("dststep - %d\n",dststep);
     for(;; dst += dststep*i, dy += i)
     {
         int dcount = bufRows - ay - startY - rowCount + roi.y;
         dcount = dcount > 0 ? dcount : bufRows - kheight + 1;
-	if (dcount < count)
-		dcount  = count;
-        //dcount = std::min(dcount, count);
+        dcount = std::min(dcount, count);
         count -= dcount;
         for( ; dcount-- > 0; src += srcstep )
         {
             int bi = (startY - startY0 + rowCount) % bufRows;
-            //uchar* brow = alignPtr(&ringBuf[0], VEC_ALIGN) + bi*bufStep;
-            //uchar* brow = (uchar*)( ((size_t)&ringBuf[0] + VEC_ALIGN - 1) & ~(size_t)(VEC_ALIGN-1))   +  bi*bufStep;
-            uchar* brow = (uchar*)( ((long int )&ringBuf[0] + VEC_ALIGN - 1) & ~(long int )(VEC_ALIGN-1))   +  bi*bufStep;
+            uchar* brow = alignPtr(&ringBuf[0], VEC_ALIGN) + bi*bufStep;
             uchar* row = isSep ? &srcRow[0] : brow;
 
             if( ++rowCount > bufRows )
@@ -406,37 +400,9 @@ int FilterEngine2::proceed( const uchar* src, int srcstep, int count,
                 ++startY;
             }
 
-            //memcpy2( row + _dx1*esz, src, (width1 - _dx2 - _dx1)*esz );
+            memcpy( row + _dx1*esz, src, (width1 - _dx2 - _dx1)*esz );
 
-	    size_t memcpy_i;
-	    void * memcpy_dst = row + _dx1*esz;
-            void * memcpy_src = (void *)src;
-	    size_t memcpy_len =  (width1 - _dx2 - _dx1)*esz;
-            if ((uintptr_t)memcpy_dst % sizeof(long) == 0 &&
-            	(uintptr_t)memcpy_src % sizeof(long) == 0 &&
-            	memcpy_len % sizeof(long) == 0) 
-	    {
-
-                long *d = (long *)memcpy_dst;
-                const long *s = (long *)memcpy_src;
-
-                for (memcpy_i=0; memcpy_i<memcpy_len/sizeof(long); memcpy_i++) 
-		{
-                        d[memcpy_i] = s[memcpy_i];
-                }
-            }
-            else 
-            {
-                char *d = (char *)memcpy_dst;
-                const char *s = (char *)memcpy_src;
-
-                for (memcpy_i=0; memcpy_i<memcpy_len; memcpy_i++) 
-		{
-                        d[memcpy_i] = s[memcpy_i];
-                }
-            }
-
-            if( makeBorder )
+           if( makeBorder )
             {
                 if( btab_esz*(int)sizeof(int) == esz ) //Sizof(int) Input to Kernel
                 {
@@ -461,61 +427,20 @@ int FilterEngine2::proceed( const uchar* src, int srcstep, int count,
             //    (*rowFilter)(row, brow, width, CV_MAT_CN(srcType));
         }
 	
-	int max_i;
-	if (bufRows <=  roi.height - (dstY + dy) + (kheight - 1))
-		max_i = bufRows;	
-	else
-		max_i =  roi.height - (dstY + dy) + (kheight - 1);
-        //int max_i = std::min(bufRows, roi.height - (dstY + dy) + (kheight - 1));
+        int max_i = std::min(bufRows, roi.height - (dstY + dy) + (kheight - 1));
         for( i = 0; i < max_i; i++ )
         {
-            //int srcY = borderInterpolate(dstY + dy + i + roi.y - ay,
-            //                wholeSize.height, columnBorderType);
-
-	    int p =  dstY + dy + i + roi.y - ay;
-	    int len = wholeSize.height;
-	    int borderType = columnBorderType;
+            int srcY = borderInterpolate(dstY + dy + i + roi.y - ay,
+                            wholeSize.height, columnBorderType);
 
 
-    	    if( (unsigned)p < (unsigned)len )
-    	        ;
-    	    else if( borderType == BORDER_REPLICATE )
-    	        p = p < 0 ? 0 : len - 1;
-    	    else if( borderType == BORDER_REFLECT || borderType == BORDER_REFLECT_101 )
-    	    {
-    	        int delta = borderType == BORDER_REFLECT_101;
-    	        if( len == 1 )
-    	            return 0;
-    	        do
-    	        {
-    	            if( p < 0 )
-    	                p = -p - 1 + delta;
-    	            else
-    	                p = len - 1 - (p - len) - delta;
-    	        }
-    	        while( (unsigned)p >= (unsigned)len );
-    	    }
-    	    else if( borderType == BORDER_WRAP )
-    	    {
-    	        if( p < 0 )
-    	            p -= ((p-len+1)/len)*len;
-    	        if( p >= len )
-    	            p %= len;
-    	    }
-    	    else if( borderType == BORDER_CONSTANT )
-    	        p = -1;
-    	    else
-		;
-    	        //CV_Error( CV_StsBadArg, "Unknown/unsupported border type" );
-	
 	    int srcY = p;
 
             if( srcY < 0 ) // can happen only with constant border type
-                //brows[i] = alignPtr(&constBorderRow[0], VEC_ALIGN);
-                brows[i] = (uchar *) ( ((long int)&constBorderRow[0] + VEC_ALIGN - 1) & ~(long int)(VEC_ALIGN-1) ) ;
+                brows[i] = alignPtr(&constBorderRow[0], VEC_ALIGN);
             else
             {
-                //CV_Assert( srcY >= startY );
+                CV_Assert( srcY >= startY );
                 if( srcY >= startY + rowCount )
                     break;
                 int bi = (srcY - startY0) % bufRows;
@@ -533,7 +458,7 @@ int FilterEngine2::proceed( const uchar* src, int srcstep, int count,
     //printf("i - %d\n",i);
 
     dstY += dy;
-    //CV_Assert( dstY <= roi.height );
+    CV_Assert( dstY <= roi.height );
     return dy;
 }
 
