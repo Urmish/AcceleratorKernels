@@ -21,46 +21,125 @@ const int DESCRIPTOR_SIZE = 32;
 #define CV_ELEM_SIZE(type) \
      (CV_MAT_CN(type) << ((((sizeof(size_t)/4+1)*16384|0x3a50) >> CV_MAT_DEPTH(type)*2) & 3))
 
-void *memcpy2(void *dst, const void *src, size_t len)
+
+static inline Point normalizeAnchor2( Point anchor, Size ksize )
 {
-        size_t i;
-
-        /*
-         * memcpy does not support overlapping buffers, so always do it
-         * forwards. (Don't change this without adjusting memmove.)
-         *
-         * For speedy copying, optimize the common case where both pointers
-         * and the length are word-aligned, and copy word-at-a-time instead
-         * of byte-at-a-time. Otherwise, copy by bytes.
-         *
-         * The alignment logic below should be portable. We rely on
-         * the compiler to be reasonably intelligent about optimizing
-         * the divides and modulos out. Fortunately, it is.
-         */
-
-        if ((uintptr_t)dst % sizeof(long) == 0 &&
-            (uintptr_t)src % sizeof(long) == 0 &&
-            len % sizeof(long) == 0) {
-
-                long *d = (long *)dst;
-                const long *s = (long *)src;
-
-                for (i=0; i<len/sizeof(long); i++) {
-                        d[i] = s[i];
-                }
-        }
-        else {
-                char *d = (char *)dst;
-                const char *s = (char *)src;
-
-                for (i=0; i<len; i++) {
-                        d[i] = s[i];
-                }
-        }
-
-        return dst;
+    if( anchor.x == -1 )
+        anchor.x = ksize.width/2;
+    if( anchor.y == -1 )
+        anchor.y = ksize.height/2;
+    CV_Assert( anchor.inside(Rect(0, 0, ksize.width, ksize.height)) );
+    return anchor;
 }
 
+
+template<typename ST, typename DT> struct Cast2
+{
+    typedef ST type1;
+    typedef DT rtype;
+
+    DT operator()(ST val) const { return saturate_cast<DT>(val); }
+};
+
+struct FilterNoVec
+{
+    FilterNoVec() {}
+    FilterNoVec(const Mat&, int, double) {}
+    int operator()(const uchar**, uchar*, int) const { return 0; }
+};
+
+
+
+typedef FilterNoVec FilterVec_8u_2;
+typedef FilterNoVec FilterVec_8u16s_2;
+typedef FilterNoVec FilterVec_32f_2;
+
+void preprocess2DKernel2( const Mat& kernel, vector<Point>& coords, vector<uchar>& coeffs );
+//template<typename ST, class CastOp, class VecOp> struct Filter2D_2 : public BaseFilter
+struct Filter2D_2 : public BaseFilter
+{
+    //typedef typename CastOp::type1 KT;
+    //typedef typename CastOp::rtype DT;
+
+    Filter2D_2( const Mat& _kernel, Point _anchor,
+        //double _delta, const CastOp& _castOp=CastOp(),
+        double _delta)
+ //       const VecOp& _vecOp=VecOp() )
+    {
+        anchor = _anchor;
+        ksize = _kernel.size();
+        //delta = saturate_cast<KT>(_delta);
+        delta = saturate_cast<float>(_delta);
+        //castOp0 = _castOp;
+        //vecOp = _vecOp;
+        //CV_Assert( _kernel.type() == DataType<KT>::type );
+        CV_Assert( _kernel.type() == DataType<float>::type );
+        preprocess2DKernel2( _kernel, coords, coeffs );
+        ptrs.resize( coords.size() );
+    }
+
+//    void operator()(const uchar** src, uchar* dst, int dststep, int count, int width, int cn)
+    void kernel_operator(const uchar** src, uchar* dst, int dststep, int count, int width, int cn);
+    //void my_operator(const uchar** src, uchar* dst, int dststep, int count, int width, int cn)
+    //{
+    //    KT _delta = delta;
+    //    const Point* pt = &coords[0];
+    //    const KT* kf = (const KT*)&coeffs[0];
+    //    const ST** kp = (const ST**)&ptrs[0];
+    //    int i, k, nz = (int)coords.size();
+    //    CastOp castOp = castOp0;
+
+    //    width *= cn;
+    //    for( ; count > 0; count--, dst += dststep, src++ )
+    //    {
+    //        DT* D = (DT*)dst;
+
+    //        for( k = 0; k < nz; k++ )
+    //            kp[k] = (const ST*)src[pt[k].y] + pt[k].x*cn;
+
+    //        i = vecOp((const uchar**)kp, dst, width);
+    //        #if CV_ENABLE_UNROLLED
+    //        for( ; i <= width - 4; i += 4 )
+    //        {
+    //            KT s0 = _delta, s1 = _delta, s2 = _delta, s3 = _delta;
+
+    //            for( k = 0; k < nz; k++ )
+    //            {
+    //                const ST* sptr = kp[k] + i;
+    //                KT f = kf[k];
+    //                s0 += f*sptr[0];
+    //                s1 += f*sptr[1];
+    //                s2 += f*sptr[2];
+    //                s3 += f*sptr[3];
+    //            }
+
+    //            D[i] = castOp(s0); D[i+1] = castOp(s1);
+    //            D[i+2] = castOp(s2); D[i+3] = castOp(s3);
+    //        }
+    //        #endif
+    //        for( ; i < width; i++ )
+    //        {
+    //            KT s0 = _delta;
+    //            for( k = 0; k < nz; k++ )
+    //                s0 += kf[k]*kp[k][i];
+    //            D[i] = castOp(s0);
+    //        }
+    //    }
+    //}
+    void operator()(const uchar** src, uchar* dst, int dststep, int count, int width, int cn)
+    {
+	kernel_operator(src,dst,dststep,count,width,cn);
+    }
+
+public:
+    vector<Point> coords;
+    vector<uchar> coeffs;
+    vector<uchar*> ptrs;
+    //KT delta;
+    float delta;
+    //CastOp castOp0;
+    //VecOp vecOp;
+};
 
 class CV_EXPORTS FilterEngine2
 {
@@ -68,7 +147,8 @@ public:
     //! the default constructor
     FilterEngine2();
     //! the full constructor. Either _filter2D or both _rowFilter and _columnFilter must be non-empty.
-    FilterEngine2(const Ptr<BaseFilter>& _filter2D,
+    //FilterEngine2(const Ptr<BaseFilter>& _filter2D,
+    FilterEngine2(const Ptr<Filter2D_2>& _filter2D,
                  const Ptr<BaseRowFilter>& _rowFilter,
                  const Ptr<BaseColumnFilter>& _columnFilter,
                  int srcType, int dstType, int bufType,
@@ -78,7 +158,8 @@ public:
     //! the destructor
     virtual ~FilterEngine2();
     //! reinitializes the engine. The previously assigned filters are released.
-    void init(const Ptr<BaseFilter>& _filter2D,
+    //void init(const Ptr<BaseFilter>& _filter2D,
+    void init(const Ptr<Filter2D_2>& _filter2D,
               const Ptr<BaseRowFilter>& _rowFilter,
               const Ptr<BaseColumnFilter>& _columnFilter,
               int srcType, int dstType, int bufType,
@@ -98,7 +179,9 @@ public:
                         Point dstOfs=Point(0,0),
                         bool isolated=false);
     //! returns true if the filter is separable
-    bool isSeparable() const { return (const BaseFilter*)filter2D == 0; }
+    //bool isSeparable() const { return (const BaseFilter*)filter2D == 0; }
+    //bool isSeparable() const { return (const Filter2D_2*)filter2D == 0; }
+    bool isSeparable() const { return 0; }
     //bool isSeparable() const { return 0; }
     //! returns the number
     int remainingInputRows() const;
@@ -121,7 +204,8 @@ public:
     int bufStep, startY, startY0, endY, rowCount, dstY;
     vector<uchar*> rows;
 
-    Ptr<BaseFilter> filter2D;
+    //Ptr<BaseFilter> filter2D;
+    Ptr<Filter2D_2> filter2D;
     Ptr<BaseRowFilter> rowFilter;
     Ptr<BaseColumnFilter> columnFilter;
 };
@@ -139,7 +223,8 @@ FilterEngine2::FilterEngine2()
 }
 
 
-FilterEngine2::FilterEngine2( const Ptr<BaseFilter>& _filter2D,
+//FilterEngine2::FilterEngine2( const Ptr<BaseFilter>& _filter2D,
+FilterEngine2::FilterEngine2( const Ptr<Filter2D_2>& _filter2D,
                             const Ptr<BaseRowFilter>& _rowFilter,
                             const Ptr<BaseColumnFilter>& _columnFilter,
                             int _srcType, int _dstType, int _bufType,
@@ -155,7 +240,8 @@ FilterEngine2::~FilterEngine2()
 }
 
 
-void FilterEngine2::init( const Ptr<BaseFilter>& _filter2D,
+//void FilterEngine2::init( const Ptr<BaseFilter>& _filter2D,
+void FilterEngine2::init( const Ptr<Filter2D_2>& _filter2D,
                          const Ptr<BaseRowFilter>& _rowFilter,
                          const Ptr<BaseColumnFilter>& _columnFilter,
                          int _srcType, int _dstType, int _bufType,
@@ -192,12 +278,15 @@ void FilterEngine2::init( const Ptr<BaseFilter>& _filter2D,
     else
     {
         CV_Assert( bufType == srcType );
-        ksize = filter2D->ksize;
-        anchor = filter2D->anchor;
+        ksize = (filter2D)->ksize;
+        anchor = (filter2D)->anchor;
+//	printf("%d \n",anchor.y);
     }
 
     CV_Assert( 0 <= anchor.x && anchor.x < ksize.width &&
                0 <= anchor.y && anchor.y < ksize.height );
+
+    //printf("Anchor %d %d\n",anchor.x, anchor.y);
 
     borderElemSize = srcElemSize/(CV_MAT_DEPTH(srcType) >= CV_32S ? sizeof(int) : 1);
     int borderLength = std::max(ksize.width - 1, 1);
@@ -361,38 +450,47 @@ int FilterEngine2::proceed( const uchar* src, int srcstep, int count,
     //CV_Assert( wholeSize.width > 0 && wholeSize.height > 0 );
 
     const int *btab = &borderTab[0];
-    int esz = (int)getElemSize(srcType); 
+    int esz = (int)getElemSize(srcType); //Input to Kernel
     int btab_esz = borderElemSize;
     uchar** brows = &rows[0];
-    int bufRows = (int)rows.size(); 
-    int cn = CV_MAT_CN(bufType);
-    int width = roi.width, kwidth = ksize.width; 
-    int kheight = ksize.height, ay = anchor.y;
+    int bufRows = (int)rows.size(); //Input to Kernels
+    int cn = CV_MAT_CN(bufType); //Input to Kernel
+    int width = roi.width, kwidth = ksize.width; //Input to Kernel
+    int kheight = ksize.height, ay = anchor.y; //Input to Kernel
     int _dx1 = dx1, _dx2 = dx2;
-    int width1 = roi.width + kwidth - 1; 
-    int xofs1 = std::min(roi.x, anchor.x); 
-    bool isSep = isSeparable();
+    int width1 = roi.width + kwidth - 1;  //Input to Kernel
+    int xofs1 = std::min(roi.x, anchor.x); //Input to kernel
+    //bool isSep = isSeparable();
+    bool isSep = 0;
   
     bool makeBorder = (_dx1 > 0 || _dx2 > 0) && rowBorderType != BORDER_CONSTANT;
     int dy = 0, i = 0;
 
     src -= xofs1*esz;
-    count = std::min(count, remainingInputRows());
+ //   count = std::min(count, remainingInputRows()); 
+    if ( endY - startY - rowCount < count)
+	count =  endY - startY - rowCount;
+ 
 
-    CV_Assert( src && dst && count > 0 );
+    //CV_Assert( src && dst && count > 0 );
 
-    //printf("dststep - %d\n",dststep);
     for(;; dst += dststep*i, dy += i)
     {
         int dcount = bufRows - ay - startY - rowCount + roi.y;
-        dcount = dcount > 0 ? dcount : bufRows - kheight + 1;
-        dcount = std::min(dcount, count);
+        dcount = dcount > 0 ? dcount : bufRows - kheight + 1;	
+	if (dcount < count)
+		dcount  = count;
+
+        //dcount = std::min(dcount, count);
         count -= dcount;
         for( ; dcount-- > 0; src += srcstep )
         {
             int bi = (startY - startY0 + rowCount) % bufRows;
-            uchar* brow = alignPtr(&ringBuf[0], VEC_ALIGN) + bi*bufStep;
+            //uchar* brow = alignPtr(&ringBuf[0], VEC_ALIGN) + bi*bufStep;
+            uchar* brow = (uchar*)( ((long int )&ringBuf[0] + VEC_ALIGN - 1) & ~(long int )(VEC_ALIGN-1))   +  bi*bufStep;
             uchar* row = isSep ? &srcRow[0] : brow;
+
+            //printf("StartY %d\n",startY);
 
             if( ++rowCount > bufRows )
             {
@@ -400,7 +498,36 @@ int FilterEngine2::proceed( const uchar* src, int srcstep, int count,
                 ++startY;
             }
 
-            memcpy( row + _dx1*esz, src, (width1 - _dx2 - _dx1)*esz );
+        //    memcpy( row + _dx1*esz, src, (width1 - _dx2 - _dx1)*esz );
+	    size_t memcpy_i;
+	    void * memcpy_dst = row + _dx1*esz;
+            void * memcpy_src = (void *)src;
+	    size_t memcpy_len =  (width1 - _dx2 - _dx1)*esz;
+            if ((uintptr_t)memcpy_dst % sizeof(long) == 0 &&
+            	(uintptr_t)memcpy_src % sizeof(long) == 0 &&
+            	memcpy_len % sizeof(long) == 0) 
+	    {
+
+                long *d = (long *)memcpy_dst;
+                const long *s = (long *)memcpy_src;
+
+                for (memcpy_i=0; memcpy_i<memcpy_len/sizeof(long); memcpy_i++) 
+		{
+                        d[memcpy_i] = s[memcpy_i];
+                }
+            }
+            else 
+            {
+                char *d = (char *)memcpy_dst;
+                const char *s = (char *)memcpy_src;
+
+                for (memcpy_i=0; memcpy_i<memcpy_len; memcpy_i++) 
+		{
+                        d[memcpy_i] = s[memcpy_i];
+                }
+            }
+
+
 
            if( makeBorder )
             {
@@ -427,20 +554,64 @@ int FilterEngine2::proceed( const uchar* src, int srcstep, int count,
             //    (*rowFilter)(row, brow, width, CV_MAT_CN(srcType));
         }
 	
-        int max_i = std::min(bufRows, roi.height - (dstY + dy) + (kheight - 1));
+        //int max_i = std::min(bufRows, roi.height - (dstY + dy) + (kheight - 1));	
+	int max_i;
+	if (bufRows <=  roi.height - (dstY + dy) + (kheight - 1))
+		max_i = bufRows;	
+	else
+		max_i =  roi.height - (dstY + dy) + (kheight - 1);
+
         for( i = 0; i < max_i; i++ )
         {
-            int srcY = borderInterpolate(dstY + dy + i + roi.y - ay,
-                            wholeSize.height, columnBorderType);
+          //  int srcY = borderInterpolate(dstY + dy + i + roi.y - ay,
+        //                    wholeSize.height, columnBorderType);
+	    int p =  dstY + dy + i + roi.y - ay;
+	    int len = wholeSize.height;
+	    int borderType = columnBorderType;
 
 
+    	    if( (unsigned)p < (unsigned)len )
+    	        ;
+    	    else if( borderType == BORDER_REPLICATE )
+    	        p = p < 0 ? 0 : len - 1;
+    	    else if( borderType == BORDER_REFLECT || borderType == BORDER_REFLECT_101 )
+    	    {
+    	        int delta = borderType == BORDER_REFLECT_101;
+    	        if( len == 1 )
+    	            return 0;
+    	        do
+    	        {
+    	            if( p < 0 )
+    	                p = -p - 1 + delta;
+    	            else
+    	                p = len - 1 - (p - len) - delta;
+    	        }
+    	        while( (unsigned)p >= (unsigned)len );
+    	    }
+    	    else if( borderType == BORDER_WRAP )
+    	    {
+    	        if( p < 0 )
+    	            p -= ((p-len+1)/len)*len;
+    	        if( p >= len )
+    	            p %= len;
+    	    }
+    	    else if( borderType == BORDER_CONSTANT )
+    	        p = -1;
+    	    else
+		;
+    	        //CV_Error( CV_StsBadArg, "Unknown/unsupported border type" );
+	
 	    int srcY = p;
 
+
+
             if( srcY < 0 ) // can happen only with constant border type
-                brows[i] = alignPtr(&constBorderRow[0], VEC_ALIGN);
+                //brows[i] = alignPtr(&constBorderRow[0], VEC_ALIGN);
+                brows[i] = (uchar *) ( ((long int)&constBorderRow[0] + VEC_ALIGN - 1) & ~(long int)(VEC_ALIGN-1) ) ;
             else
             {
-                CV_Assert( srcY >= startY );
+	        //printf("%d %d \n",srcY,startY);
+                //CV_Assert( srcY >= startY );
                 if( srcY >= startY + rowCount )
                     break;
                 int bi = (srcY - startY0) % bufRows;
@@ -450,15 +621,52 @@ int FilterEngine2::proceed( const uchar* src, int srcstep, int count,
         if( i < kheight )
             break;
         i -= kheight - 1;
-        //if( isSeparable() )
-        //    (*columnFilter)((const uchar**)brows, dst, dststep, i, roi.width*cn);
-        //else
-            (*filter2D)((const uchar**)brows, dst, dststep, i, roi.width, cn);
+	    uchar** src_ko = (uchar**)brows;
+	    uchar* dst_ko = dst;
+	    //void Filter2D_2::kernel_operator(const uchar** src, uchar* dst, int dststep, int count, int width, int cn)
+	    {
+	        //float _delta = delta;
+	        //const Point* pt = &coords[0];
+	        //const float* kf = (const float*)&coeffs[0];
+	        //const uchar** kp = (const uchar**)&ptrs[0];
+	        //float _delta = delta;
+	        
+	        float _delta = (const float)(filter2D->delta);
+	        //const Point* pt = &coords[0];
+	        const Point* pt = &(filter2D->coords[0]);
+	        const float* kf = (const float*)&(filter2D->coeffs[0]);
+	        const uchar** kp = (const uchar**)&(filter2D->ptrs[0]);
+	        int i_ko, k_ko;
+	        int nz = (int)((filter2D->coords).size());
+	    
+	        int width_ko = roi.width;
+		width_ko *= cn;
+		
+	        for(int count_ko=i ; count_ko > 0; count_ko--, dst_ko += dststep, src_ko++ )
+	        //for( ; i > 0; i--, dst += dststep, src_ko++ )
+	        {
+	            //DT* D = (DT*)dst;
+	            uchar* D = (uchar*)dst_ko;
+	    
+	            for( k_ko = 0; k_ko < nz; k_ko++ )
+	                kp[k_ko] = (const uchar*)src_ko[pt[k_ko].y] + pt[k_ko].x*cn;
+	    
+	            i_ko = 0;
+	            for( ; i_ko < width_ko; i_ko++ )
+	            {
+	                float s0 = _delta;
+	                for( k_ko = 0; k_ko < nz; k_ko++ )
+	                    s0 += kf[k_ko]*kp[k_ko][i_ko];
+	    	    	int i_s0 = My_Round(s0);
+	                D[i_ko] = (uchar)((unsigned)i_s0 <= UCHAR_MAX ? i_s0 : i_s0 > 0 ? UCHAR_MAX : 0);
+	            }
+	        }
+	    }
+	    //(*filter2D)((const uchar**)brows, dst, dststep, i, roi.width, cn);
     }
-    //printf("i - %d\n",i);
 
     dstY += dy;
-    CV_Assert( dstY <= roi.height );
+    //CV_Assert( dstY <= roi.height );
     return dy;
 }
 
@@ -489,13 +697,225 @@ void FilterEngine2::apply(const Mat& src, Mat& dst,
 }
 
 
+void preprocess2DKernel2( const Mat& kernel, vector<Point>& coords, vector<uchar>& coeffs )
+{
+    int i, j, k, nz = countNonZero(kernel), ktype = kernel.type();
+    if(nz == 0)
+        nz = 1;
+    CV_Assert( ktype == CV_8U || ktype == CV_32S || ktype == CV_32F || ktype == CV_64F );
+    coords.resize(nz);
+    coeffs.resize(nz*getElemSize(ktype));
+    uchar* _coeffs = &coeffs[0];
+
+    for( i = k = 0; i < kernel.rows; i++ )
+    {
+        const uchar* krow = kernel.data + kernel.step*i;
+        for( j = 0; j < kernel.cols; j++ )
+        {
+            if( ktype == CV_8U )
+            {
+                uchar val = krow[j];
+                if( val == 0 )
+                    continue;
+                coords[k] = Point(j,i);
+                _coeffs[k++] = val;
+            }
+            else if( ktype == CV_32S )
+            {
+                int val = ((const int*)krow)[j];
+                if( val == 0 )
+                    continue;
+                coords[k] = Point(j,i);
+                ((int*)_coeffs)[k++] = val;
+            }
+            else if( ktype == CV_32F )
+            {
+                float val = ((const float*)krow)[j];
+                if( val == 0 )
+                    continue;
+                coords[k] = Point(j,i);
+                ((float*)_coeffs)[k++] = val;
+            }
+            else
+            {
+                double val = ((const double*)krow)[j];
+                if( val == 0 )
+                    continue;
+                coords[k] = Point(j,i);
+                ((double*)_coeffs)[k++] = val;
+            }
+        }
+    }
+}
+
+
+
+//template <typename ST, class CastOp, class VecOp>
+//void Filter2D_2<ST, CastOp, VecOp>::kernel_operator(const uchar** src, uchar* dst, int dststep, int count, int width, int cn)
+//{
+//    KT _delta = delta;
+//    const Point* pt = &coords[0];
+//    const KT* kf = (const KT*)&coeffs[0];
+//    const ST** kp = (const ST**)&ptrs[0];
+//    int i, k, nz = (int)coords.size();
+//    CastOp castOp = castOp0; //Replace this
+//
+//    width *= cn;
+//    for( ; count > 0; count--, dst += dststep, src++ )
+//    {
+//        DT* D = (DT*)dst;
+//
+//        for( k = 0; k < nz; k++ )
+//            kp[k] = (const ST*)src[pt[k].y] + pt[k].x*cn;
+//
+//        i = vecOp((const uchar**)kp, dst, width);
+//        for( ; i < width; i++ )
+//        {
+//            KT s0 = _delta;
+//            for( k = 0; k < nz; k++ )
+//                s0 += kf[k]*kp[k][i];
+//            D[i] = castOp(s0);
+//        }
+//    }
+//}
+
+//template <typename ST, class CastOp, class VecOp>
+//void Filter2D_2<ST, CastOp, VecOp>::kernel_operator(const uchar** src, uchar* dst, int dststep, int count, int width, int cn)
+void Filter2D_2::kernel_operator(const uchar** src, uchar* dst, int dststep, int count, int width, int cn)
+{
+    //KT _delta = delta;
+    float _delta = delta;
+    const Point* pt = &coords[0];
+    //const KT* kf = (const KT*)&coeffs[0];
+    const float* kf = (const float*)&coeffs[0];
+    //const ST** kp = (const ST**)&ptrs[0];
+    const uchar** kp = (const uchar**)&ptrs[0];
+    int i, k, nz = (int)coords.size();
+    //CastOp castOp = castOp0; //Replace this
+
+    width *= cn;
+    for( ; count > 0; count--, dst += dststep, src++ )
+    {
+        //DT* D = (DT*)dst;
+        uchar* D = (uchar*)dst;
+
+        for( k = 0; k < nz; k++ )
+            //kp[k] = (const ST*)src[pt[k].y] + pt[k].x*cn;
+            kp[k] = (const uchar*)src[pt[k].y] + pt[k].x*cn;
+
+        //i = vecOp((const uchar**)kp, dst, width);
+        i = 0;
+        for( ; i < width; i++ )
+        {
+            //KT s0 = _delta;
+            float s0 = _delta;
+            for( k = 0; k < nz; k++ )
+                s0 += kf[k]*kp[k][i];
+            //D[i] = castOp(s0);
+	    int i_s0 = My_Round(s0);
+            D[i] = (uchar)((unsigned)i_s0 <= UCHAR_MAX ? i_s0 : i_s0 > 0 ? UCHAR_MAX : 0);
+        }
+    }
+}
+
+
+//CV_EXPORTS cv::Ptr<cv::BaseFilter> getLinearFilter2(int srcType, int dstType,
+CV_EXPORTS cv::Ptr<Filter2D_2> getLinearFilter2(int srcType, int dstType,
+                                           InputArray kernel,
+                                           Point anchor=Point(-1,-1),
+                                           double delta=0, int bits=0);
+
+
+
+//Ptr<cv::BaseFilter> getLinearFilter2(int srcType, int dstType,
+Ptr<Filter2D_2> getLinearFilter2(int srcType, int dstType,
+                                InputArray filter_kernel, Point anchor,
+                                double delta, int bits)
+{
+    Mat _kernel = filter_kernel.getMat();
+    int sdepth = CV_MAT_DEPTH(srcType), ddepth = CV_MAT_DEPTH(dstType);
+    int cn = CV_MAT_CN(srcType), kdepth = _kernel.depth();
+    CV_Assert( cn == CV_MAT_CN(dstType) && ddepth >= sdepth );
+
+    anchor = normalizeAnchor2(anchor, _kernel.size());
+
+    /*if( sdepth == CV_8U && ddepth == CV_8U && kdepth == CV_32S )
+        return Ptr<BaseFilter>(new Filter2D<uchar, FixedPtCastEx<int, uchar>, FilterVec_8u>
+            (_kernel, anchor, delta, FixedPtCastEx<int, uchar>(bits),
+            FilterVec_8u(_kernel, bits, delta)));
+    if( sdepth == CV_8U && ddepth == CV_16S && kdepth == CV_32S )
+        return Ptr<BaseFilter>(new Filter2D<uchar, FixedPtCastEx<int, short>, FilterVec_8u16s>
+            (_kernel, anchor, delta, FixedPtCastEx<int, short>(bits),
+            FilterVec_8u16s(_kernel, bits, delta)));*/
+
+    kdepth = sdepth == CV_64F || ddepth == CV_64F ? CV_64F : CV_32F;
+    Mat kernel;
+    if( _kernel.type() == kdepth )
+        kernel = _kernel;
+    else
+        _kernel.convertTo(kernel, kdepth, _kernel.type() == CV_32S ? 1./(1 << bits) : 1.);
+    if( sdepth == CV_8U && ddepth == CV_8U )
+        //return Ptr<cv::BaseFilter>(new Filter2D_2<uchar, Cast2<float, uchar>, FilterVec_8u_2>
+        //return Ptr<cv::BaseFilter>(new Filter2D_2
+        return Ptr<Filter2D_2>(new Filter2D_2
+            //(kernel, anchor, delta, FilterVec_8u_2(kernel, 0, delta)));
+            (kernel, anchor, delta));
+    //if( sdepth == CV_8U && ddepth == CV_16U )
+    //    return Ptr<BaseFilter>(new Filter2D_2<uchar,
+    //        Cast2<float, ushort>, FilterNoVec>(kernel, anchor, delta));
+    //if( sdepth == CV_8U && ddepth == CV_16S )
+    //    return Ptr<BaseFilter>(new Filter2D_2<uchar, Cast2<float, short>, FilterVec_8u16s_2>
+    //        (kernel, anchor, delta, Cast2<float, short>(), FilterVec_8u16s_2(kernel, 0, delta)));
+    //if( sdepth == CV_8U && ddepth == CV_32F )
+    //    return Ptr<BaseFilter>(new Filter2D_2<uchar,
+    //        Cast2<float, float>, FilterNoVec>(kernel, anchor, delta));
+    //if( sdepth == CV_8U && ddepth == CV_64F )
+    //    return Ptr<BaseFilter>(new Filter2D_2<uchar,
+    //        Cast2<double, double>, FilterNoVec>(kernel, anchor, delta));
+
+    //if( sdepth == CV_16U && ddepth == CV_16U )
+    //    return Ptr<BaseFilter>(new Filter2D_2<ushort,
+    //        Cast2<float, ushort>, FilterNoVec>(kernel, anchor, delta));
+    //if( sdepth == CV_16U && ddepth == CV_32F )
+    //    return Ptr<BaseFilter>(new Filter2D_2<ushort,
+    //        Cast2<float, float>, FilterNoVec>(kernel, anchor, delta));
+    //if( sdepth == CV_16U && ddepth == CV_64F )
+    //    return Ptr<BaseFilter>(new Filter2D_2<ushort,
+    //        Cast2<double, double>, FilterNoVec>(kernel, anchor, delta));
+
+    //if( sdepth == CV_16S && ddepth == CV_16S )
+    //    return Ptr<BaseFilter>(new Filter2D_2<short,
+    //        Cast2<float, short>, FilterNoVec>(kernel, anchor, delta));
+    //if( sdepth == CV_16S && ddepth == CV_32F )
+    //    return Ptr<BaseFilter>(new Filter2D_2<short,
+    //        Cast2<float, float>, FilterNoVec>(kernel, anchor, delta));
+    //if( sdepth == CV_16S && ddepth == CV_64F )
+    //    return Ptr<BaseFilter>(new Filter2D_2<short,
+    //        Cast2<double, double>, FilterNoVec>(kernel, anchor, delta));
+
+    //if( sdepth == CV_32F && ddepth == CV_32F )
+    //    return Ptr<BaseFilter>(new Filter2D_2<float, Cast2<float, float>, FilterVec_32f_2>
+    //        (kernel, anchor, delta, Cast2<float, float>(), FilterVec_32f_2(kernel, 0, delta)));
+    //if( sdepth == CV_64F && ddepth == CV_64F )
+    //    return Ptr<BaseFilter>(new Filter2D_2<double,
+    //        Cast2<double, double>, FilterNoVec>(kernel, anchor, delta));
+
+    CV_Error_( CV_StsNotImplemented,
+        ("Unsupported combination of source format (=%d), and destination format (=%d)",
+        srcType, dstType));
+
+    return Ptr<BaseFilter>(0);
+}
+
+
+
+
+
+
 CV_EXPORTS Ptr<FilterEngine2> createLinearFilter2(int srcType, int dstType,
                  InputArray kernel, Point _anchor=Point(-1,-1),
                  double delta=0, int rowBorderType=BORDER_DEFAULT,
                  int columnBorderType=-1, const Scalar& borderValue=Scalar());
-
-
-
 
 
 Ptr<FilterEngine2> createLinearFilter2( int _srcType, int _dstType,
@@ -522,9 +942,10 @@ Ptr<FilterEngine2> createLinearFilter2( int _srcType, int _dstType,
         _kernel.convertTo(kernel, CV_32S, 1 << bits);
     }*/
 
-    Ptr<BaseFilter> _filter2D = getLinearFilter(_srcType, _dstType,
+    //Ptr<BaseFilter> _filter2D = getLinearFilter2(_srcType, _dstType,
+    Ptr<Filter2D_2> _filter2D = getLinearFilter2(_srcType, _dstType,
         kernel, _anchor, _delta, bits);
-
+    //printf("Anchor is %d %d\n",_anchor.x,_anchor.y);
     return Ptr<FilterEngine2>(new FilterEngine2(_filter2D, Ptr<BaseRowFilter>(0),
         Ptr<BaseColumnFilter>(0), _srcType, _dstType, _srcType,
         _rowBorderType, _columnBorderType, _borderValue ));
@@ -902,9 +1323,12 @@ static void computeORB2Descriptor_kernel(float *a, float *b, const uchar* img_da
     #define GET_VALUE(idx) \
            (x = pattern[idx].x*a[y_k] - pattern[idx].y*b[y_k], \
             y = pattern[idx].x*b[y_k] + pattern[idx].y*a[y_k], \
-            ix = cvRound(x), \
-            iy = cvRound(y), \
+            ix = My_Round(x), \
+            iy = My_Round(y), \
             *(center + iy*step + ix) )
+		
+            /* paste befor center ix = cvRound(x), \
+            iy = cvRound(y), \*/
 #else
     #define GET_VALUE(idx) \
         (x = pattern[idx].x*a - pattern[idx].y*b, \
@@ -1742,7 +2166,7 @@ int main( int argc, char** argv )
   //-- Draw matches
   Mat img_matches;
   drawMatches( img_1, keypoints_1, img_2, keypoints_2, matches, img_matches );
-
+  printf("imshow \n");
   //-- Show detected matches
   imshow("Matches", img_matches );
 
