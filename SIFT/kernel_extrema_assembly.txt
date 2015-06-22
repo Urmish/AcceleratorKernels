@@ -1,0 +1,872 @@
+//void kernel_extrema(float* currptr, float* prevptr, float* nextptr)
+void kernel_extrema(uchar* currptr_data, int currptr_int,uchar* prevptr_data, int prevptr_int, uchar* nextptr_data, int nextptr_int, int threshold, int* tempStorageLocation, int& totalPointsOfInterest, int rows, int cols, int step)
+{
+  40d14d:	55                   	push   %rbp
+  40d14e:	48 89 e5             	mov    %rsp,%rbp
+  40d151:	48 89 7d c8          	mov    %rdi,-0x38(%rbp)
+  40d155:	89 75 c4             	mov    %esi,-0x3c(%rbp)
+  40d158:	48 89 55 b8          	mov    %rdx,-0x48(%rbp)
+  40d15c:	89 4d c0             	mov    %ecx,-0x40(%rbp)
+  40d15f:	4c 89 45 b0          	mov    %r8,-0x50(%rbp)
+  40d163:	44 89 4d ac          	mov    %r9d,-0x54(%rbp)
+	//printf("Kernel Extrema\n");
+	int totalPointsOfInterest_temp = 0;
+  40d167:	c7 45 d8 00 00 00 00 	movl   $0x0,-0x28(%rbp)
+	for( int r = SIFT_IMG_BORDER; r < rows-SIFT_IMG_BORDER; r++)
+  40d16e:	c7 45 dc 05 00 00 00 	movl   $0x5,-0x24(%rbp)
+  40d175:	e9 61 09 00 00       	jmpq   40dadb <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x98e>
+	{
+	    //printf("r is %d \n",r);
+	    //const sift_wt* currptr = img.ptr<sift_wt>(r); //sift_wt is float
+	    const float* currptr = (float *)(currptr_data + currptr_int*r);
+  40d17a:	8b 45 c4             	mov    -0x3c(%rbp),%eax
+  40d17d:	0f af 45 dc          	imul   -0x24(%rbp),%eax
+  40d181:	48 63 d0             	movslq %eax,%rdx
+  40d184:	48 8b 45 c8          	mov    -0x38(%rbp),%rax
+  40d188:	48 01 d0             	add    %rdx,%rax
+  40d18b:	48 89 45 e8          	mov    %rax,-0x18(%rbp)
+	    //const sift_wt* prevptr = prev.ptr<sift_wt>(r);
+	    const float* prevptr = (float *)(prevptr_data + prevptr_int*r);
+  40d18f:	8b 45 c0             	mov    -0x40(%rbp),%eax
+  40d192:	0f af 45 dc          	imul   -0x24(%rbp),%eax
+  40d196:	48 63 d0             	movslq %eax,%rdx
+  40d199:	48 8b 45 b8          	mov    -0x48(%rbp),%rax
+  40d19d:	48 01 d0             	add    %rdx,%rax
+  40d1a0:	48 89 45 f0          	mov    %rax,-0x10(%rbp)
+	    //const sift_wt* nextptr = next.ptr<sift_wt>(r);
+	    const float* nextptr = (float *)(nextptr_data + nextptr_int*r);
+  40d1a4:	8b 45 ac             	mov    -0x54(%rbp),%eax
+  40d1a7:	0f af 45 dc          	imul   -0x24(%rbp),%eax
+  40d1ab:	48 63 d0             	movslq %eax,%rdx
+  40d1ae:	48 8b 45 b0          	mov    -0x50(%rbp),%rax
+  40d1b2:	48 01 d0             	add    %rdx,%rax
+  40d1b5:	48 89 45 f8          	mov    %rax,-0x8(%rbp)
+	    //printf("Starting \n");
+	    for( int c = SIFT_IMG_BORDER; c < cols-SIFT_IMG_BORDER; c++)
+  40d1b9:	c7 45 e0 05 00 00 00 	movl   $0x5,-0x20(%rbp)
+  40d1c0:	e9 03 09 00 00       	jmpq   40dac8 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x97b>
+	    {
+	        //printf("r,c is %d,%d \n",r,c);
+	        float val = currptr[c];
+  40d1c5:	8b 45 e0             	mov    -0x20(%rbp),%eax
+  40d1c8:	48 98                	cltq   
+  40d1ca:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40d1d1:	00 
+  40d1d2:	48 8b 45 e8          	mov    -0x18(%rbp),%rax
+  40d1d6:	48 01 d0             	add    %rdx,%rax
+  40d1d9:	8b 00                	mov    (%rax),%eax
+  40d1db:	89 45 e4             	mov    %eax,-0x1c(%rbp)
+	
+	        // find local extrema with pixel accuracy
+	        //ACCPOT - Takes up  lot of time. Could this be accelerated?
+	        if( my_abs(val) > threshold &&
+  40d1de:	f3 0f 10 45 e4       	movss  -0x1c(%rbp),%xmm0
+  40d1e3:	0f 57 c9             	xorps  %xmm1,%xmm1
+  40d1e6:	0f 2e c1             	ucomiss %xmm1,%xmm0
+  40d1e9:	72 07                	jb     40d1f2 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0xa5>
+  40d1eb:	f3 0f 10 45 e4       	movss  -0x1c(%rbp),%xmm0
+  40d1f0:	eb 10                	jmp    40d202 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0xb5>
+  40d1f2:	f3 0f 10 4d e4       	movss  -0x1c(%rbp),%xmm1
+  40d1f7:	f3 0f 10 05 e1 ba 4d 	movss  0x4dbae1(%rip),%xmm0        # 8e8ce0 <_ZZNK5SIFT211my_operatorERKN2cv11_InputArrayES3_RSt6vectorINS0_8KeyPointESaIS5_EERKNS0_12_OutputArrayEbE8__func__+0x68>
+  40d1fe:	00 
+  40d1ff:	0f 57 c1             	xorps  %xmm1,%xmm0
+  40d202:	f3 0f 2a 4d 10       	cvtsi2ssl 0x10(%rbp),%xmm1
+  40d207:	0f 2e c1             	ucomiss %xmm1,%xmm0
+  40d20a:	0f 86 b4 08 00 00    	jbe    40dac4 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x977>
+  40d210:	f3 0f 10 45 e4       	movss  -0x1c(%rbp),%xmm0
+  40d215:	0f 57 c9             	xorps  %xmm1,%xmm1
+  40d218:	0f 2e c1             	ucomiss %xmm1,%xmm0
+  40d21b:	0f 86 60 04 00 00    	jbe    40d681 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x534>
+	           ((val > 0 && val >= currptr[c-1] && val >= currptr[c+1] &&
+  40d221:	8b 45 e0             	mov    -0x20(%rbp),%eax
+  40d224:	48 98                	cltq   
+  40d226:	48 c1 e0 02          	shl    $0x2,%rax
+  40d22a:	48 8d 50 fc          	lea    -0x4(%rax),%rdx
+  40d22e:	48 8b 45 e8          	mov    -0x18(%rbp),%rax
+  40d232:	48 01 d0             	add    %rdx,%rax
+  40d235:	f3 0f 10 08          	movss  (%rax),%xmm1
+  40d239:	f3 0f 10 45 e4       	movss  -0x1c(%rbp),%xmm0
+  40d23e:	0f 2e c1             	ucomiss %xmm1,%xmm0
+  40d241:	0f 82 3a 04 00 00    	jb     40d681 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x534>
+  40d247:	8b 45 e0             	mov    -0x20(%rbp),%eax
+  40d24a:	48 98                	cltq   
+  40d24c:	48 83 c0 01          	add    $0x1,%rax
+  40d250:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40d257:	00 
+  40d258:	48 8b 45 e8          	mov    -0x18(%rbp),%rax
+  40d25c:	48 01 d0             	add    %rdx,%rax
+  40d25f:	f3 0f 10 08          	movss  (%rax),%xmm1
+  40d263:	f3 0f 10 45 e4       	movss  -0x1c(%rbp),%xmm0
+  40d268:	0f 2e c1             	ucomiss %xmm1,%xmm0
+  40d26b:	0f 82 10 04 00 00    	jb     40d681 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x534>
+	             val >= currptr[c-step-1] && val >= currptr[c-step] && val >= currptr[c-step+1] &&
+  40d271:	8b 45 38             	mov    0x38(%rbp),%eax
+  40d274:	8b 55 e0             	mov    -0x20(%rbp),%edx
+  40d277:	29 c2                	sub    %eax,%edx
+  40d279:	89 d0                	mov    %edx,%eax
+  40d27b:	48 98                	cltq   
+  40d27d:	48 c1 e0 02          	shl    $0x2,%rax
+  40d281:	48 8d 50 fc          	lea    -0x4(%rax),%rdx
+  40d285:	48 8b 45 e8          	mov    -0x18(%rbp),%rax
+  40d289:	48 01 d0             	add    %rdx,%rax
+  40d28c:	f3 0f 10 08          	movss  (%rax),%xmm1
+	        float val = currptr[c];
+	
+	        // find local extrema with pixel accuracy
+	        //ACCPOT - Takes up  lot of time. Could this be accelerated?
+	        if( my_abs(val) > threshold &&
+	           ((val > 0 && val >= currptr[c-1] && val >= currptr[c+1] &&
+  40d290:	f3 0f 10 45 e4       	movss  -0x1c(%rbp),%xmm0
+  40d295:	0f 2e c1             	ucomiss %xmm1,%xmm0
+  40d298:	0f 82 e3 03 00 00    	jb     40d681 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x534>
+	             val >= currptr[c-step-1] && val >= currptr[c-step] && val >= currptr[c-step+1] &&
+  40d29e:	8b 45 38             	mov    0x38(%rbp),%eax
+  40d2a1:	8b 55 e0             	mov    -0x20(%rbp),%edx
+  40d2a4:	29 c2                	sub    %eax,%edx
+  40d2a6:	89 d0                	mov    %edx,%eax
+  40d2a8:	48 98                	cltq   
+  40d2aa:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40d2b1:	00 
+  40d2b2:	48 8b 45 e8          	mov    -0x18(%rbp),%rax
+  40d2b6:	48 01 d0             	add    %rdx,%rax
+  40d2b9:	f3 0f 10 08          	movss  (%rax),%xmm1
+  40d2bd:	f3 0f 10 45 e4       	movss  -0x1c(%rbp),%xmm0
+  40d2c2:	0f 2e c1             	ucomiss %xmm1,%xmm0
+  40d2c5:	0f 82 b6 03 00 00    	jb     40d681 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x534>
+  40d2cb:	8b 45 38             	mov    0x38(%rbp),%eax
+  40d2ce:	8b 55 e0             	mov    -0x20(%rbp),%edx
+  40d2d1:	29 c2                	sub    %eax,%edx
+  40d2d3:	89 d0                	mov    %edx,%eax
+  40d2d5:	48 98                	cltq   
+  40d2d7:	48 83 c0 01          	add    $0x1,%rax
+  40d2db:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40d2e2:	00 
+  40d2e3:	48 8b 45 e8          	mov    -0x18(%rbp),%rax
+  40d2e7:	48 01 d0             	add    %rdx,%rax
+  40d2ea:	f3 0f 10 08          	movss  (%rax),%xmm1
+  40d2ee:	f3 0f 10 45 e4       	movss  -0x1c(%rbp),%xmm0
+  40d2f3:	0f 2e c1             	ucomiss %xmm1,%xmm0
+  40d2f6:	0f 82 85 03 00 00    	jb     40d681 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x534>
+	             val >= currptr[c+step-1] && val >= currptr[c+step] && val >= currptr[c+step+1] &&
+  40d2fc:	8b 45 38             	mov    0x38(%rbp),%eax
+  40d2ff:	8b 55 e0             	mov    -0x20(%rbp),%edx
+  40d302:	01 d0                	add    %edx,%eax
+  40d304:	48 98                	cltq   
+  40d306:	48 c1 e0 02          	shl    $0x2,%rax
+  40d30a:	48 8d 50 fc          	lea    -0x4(%rax),%rdx
+  40d30e:	48 8b 45 e8          	mov    -0x18(%rbp),%rax
+  40d312:	48 01 d0             	add    %rdx,%rax
+  40d315:	f3 0f 10 08          	movss  (%rax),%xmm1
+	
+	        // find local extrema with pixel accuracy
+	        //ACCPOT - Takes up  lot of time. Could this be accelerated?
+	        if( my_abs(val) > threshold &&
+	           ((val > 0 && val >= currptr[c-1] && val >= currptr[c+1] &&
+	             val >= currptr[c-step-1] && val >= currptr[c-step] && val >= currptr[c-step+1] &&
+  40d319:	f3 0f 10 45 e4       	movss  -0x1c(%rbp),%xmm0
+  40d31e:	0f 2e c1             	ucomiss %xmm1,%xmm0
+  40d321:	0f 82 5a 03 00 00    	jb     40d681 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x534>
+	             val >= currptr[c+step-1] && val >= currptr[c+step] && val >= currptr[c+step+1] &&
+  40d327:	8b 45 38             	mov    0x38(%rbp),%eax
+  40d32a:	8b 55 e0             	mov    -0x20(%rbp),%edx
+  40d32d:	01 d0                	add    %edx,%eax
+  40d32f:	48 98                	cltq   
+  40d331:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40d338:	00 
+  40d339:	48 8b 45 e8          	mov    -0x18(%rbp),%rax
+  40d33d:	48 01 d0             	add    %rdx,%rax
+  40d340:	f3 0f 10 08          	movss  (%rax),%xmm1
+  40d344:	f3 0f 10 45 e4       	movss  -0x1c(%rbp),%xmm0
+  40d349:	0f 2e c1             	ucomiss %xmm1,%xmm0
+  40d34c:	0f 82 2f 03 00 00    	jb     40d681 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x534>
+  40d352:	8b 45 38             	mov    0x38(%rbp),%eax
+  40d355:	8b 55 e0             	mov    -0x20(%rbp),%edx
+  40d358:	01 d0                	add    %edx,%eax
+  40d35a:	48 98                	cltq   
+  40d35c:	48 83 c0 01          	add    $0x1,%rax
+  40d360:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40d367:	00 
+  40d368:	48 8b 45 e8          	mov    -0x18(%rbp),%rax
+  40d36c:	48 01 d0             	add    %rdx,%rax
+  40d36f:	f3 0f 10 08          	movss  (%rax),%xmm1
+  40d373:	f3 0f 10 45 e4       	movss  -0x1c(%rbp),%xmm0
+  40d378:	0f 2e c1             	ucomiss %xmm1,%xmm0
+  40d37b:	0f 82 00 03 00 00    	jb     40d681 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x534>
+	             val >= nextptr[c] && val >= nextptr[c-1] && val >= nextptr[c+1] &&
+  40d381:	8b 45 e0             	mov    -0x20(%rbp),%eax
+  40d384:	48 98                	cltq   
+  40d386:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40d38d:	00 
+  40d38e:	48 8b 45 f8          	mov    -0x8(%rbp),%rax
+  40d392:	48 01 d0             	add    %rdx,%rax
+  40d395:	f3 0f 10 08          	movss  (%rax),%xmm1
+	        // find local extrema with pixel accuracy
+	        //ACCPOT - Takes up  lot of time. Could this be accelerated?
+	        if( my_abs(val) > threshold &&
+	           ((val > 0 && val >= currptr[c-1] && val >= currptr[c+1] &&
+	             val >= currptr[c-step-1] && val >= currptr[c-step] && val >= currptr[c-step+1] &&
+	             val >= currptr[c+step-1] && val >= currptr[c+step] && val >= currptr[c+step+1] &&
+  40d399:	f3 0f 10 45 e4       	movss  -0x1c(%rbp),%xmm0
+  40d39e:	0f 2e c1             	ucomiss %xmm1,%xmm0
+  40d3a1:	0f 82 da 02 00 00    	jb     40d681 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x534>
+	             val >= nextptr[c] && val >= nextptr[c-1] && val >= nextptr[c+1] &&
+  40d3a7:	8b 45 e0             	mov    -0x20(%rbp),%eax
+  40d3aa:	48 98                	cltq   
+  40d3ac:	48 c1 e0 02          	shl    $0x2,%rax
+  40d3b0:	48 8d 50 fc          	lea    -0x4(%rax),%rdx
+  40d3b4:	48 8b 45 f8          	mov    -0x8(%rbp),%rax
+  40d3b8:	48 01 d0             	add    %rdx,%rax
+  40d3bb:	f3 0f 10 08          	movss  (%rax),%xmm1
+  40d3bf:	f3 0f 10 45 e4       	movss  -0x1c(%rbp),%xmm0
+  40d3c4:	0f 2e c1             	ucomiss %xmm1,%xmm0
+  40d3c7:	0f 82 b4 02 00 00    	jb     40d681 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x534>
+  40d3cd:	8b 45 e0             	mov    -0x20(%rbp),%eax
+  40d3d0:	48 98                	cltq   
+  40d3d2:	48 83 c0 01          	add    $0x1,%rax
+  40d3d6:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40d3dd:	00 
+  40d3de:	48 8b 45 f8          	mov    -0x8(%rbp),%rax
+  40d3e2:	48 01 d0             	add    %rdx,%rax
+  40d3e5:	f3 0f 10 08          	movss  (%rax),%xmm1
+  40d3e9:	f3 0f 10 45 e4       	movss  -0x1c(%rbp),%xmm0
+  40d3ee:	0f 2e c1             	ucomiss %xmm1,%xmm0
+  40d3f1:	0f 82 8a 02 00 00    	jb     40d681 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x534>
+	             val >= nextptr[c-step-1] && val >= nextptr[c-step] && val >= nextptr[c-step+1] &&
+  40d3f7:	8b 45 38             	mov    0x38(%rbp),%eax
+  40d3fa:	8b 55 e0             	mov    -0x20(%rbp),%edx
+  40d3fd:	29 c2                	sub    %eax,%edx
+  40d3ff:	89 d0                	mov    %edx,%eax
+  40d401:	48 98                	cltq   
+  40d403:	48 c1 e0 02          	shl    $0x2,%rax
+  40d407:	48 8d 50 fc          	lea    -0x4(%rax),%rdx
+  40d40b:	48 8b 45 f8          	mov    -0x8(%rbp),%rax
+  40d40f:	48 01 d0             	add    %rdx,%rax
+  40d412:	f3 0f 10 08          	movss  (%rax),%xmm1
+	        //ACCPOT - Takes up  lot of time. Could this be accelerated?
+	        if( my_abs(val) > threshold &&
+	           ((val > 0 && val >= currptr[c-1] && val >= currptr[c+1] &&
+	             val >= currptr[c-step-1] && val >= currptr[c-step] && val >= currptr[c-step+1] &&
+	             val >= currptr[c+step-1] && val >= currptr[c+step] && val >= currptr[c+step+1] &&
+	             val >= nextptr[c] && val >= nextptr[c-1] && val >= nextptr[c+1] &&
+  40d416:	f3 0f 10 45 e4       	movss  -0x1c(%rbp),%xmm0
+  40d41b:	0f 2e c1             	ucomiss %xmm1,%xmm0
+  40d41e:	0f 82 5d 02 00 00    	jb     40d681 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x534>
+	             val >= nextptr[c-step-1] && val >= nextptr[c-step] && val >= nextptr[c-step+1] &&
+  40d424:	8b 45 38             	mov    0x38(%rbp),%eax
+  40d427:	8b 55 e0             	mov    -0x20(%rbp),%edx
+  40d42a:	29 c2                	sub    %eax,%edx
+  40d42c:	89 d0                	mov    %edx,%eax
+  40d42e:	48 98                	cltq   
+  40d430:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40d437:	00 
+  40d438:	48 8b 45 f8          	mov    -0x8(%rbp),%rax
+  40d43c:	48 01 d0             	add    %rdx,%rax
+  40d43f:	f3 0f 10 08          	movss  (%rax),%xmm1
+  40d443:	f3 0f 10 45 e4       	movss  -0x1c(%rbp),%xmm0
+  40d448:	0f 2e c1             	ucomiss %xmm1,%xmm0
+  40d44b:	0f 82 30 02 00 00    	jb     40d681 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x534>
+  40d451:	8b 45 38             	mov    0x38(%rbp),%eax
+  40d454:	8b 55 e0             	mov    -0x20(%rbp),%edx
+  40d457:	29 c2                	sub    %eax,%edx
+  40d459:	89 d0                	mov    %edx,%eax
+  40d45b:	48 98                	cltq   
+  40d45d:	48 83 c0 01          	add    $0x1,%rax
+  40d461:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40d468:	00 
+  40d469:	48 8b 45 f8          	mov    -0x8(%rbp),%rax
+  40d46d:	48 01 d0             	add    %rdx,%rax
+  40d470:	f3 0f 10 08          	movss  (%rax),%xmm1
+  40d474:	f3 0f 10 45 e4       	movss  -0x1c(%rbp),%xmm0
+  40d479:	0f 2e c1             	ucomiss %xmm1,%xmm0
+  40d47c:	0f 82 ff 01 00 00    	jb     40d681 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x534>
+	             val >= nextptr[c+step-1] && val >= nextptr[c+step] && val >= nextptr[c+step+1] &&
+  40d482:	8b 45 38             	mov    0x38(%rbp),%eax
+  40d485:	8b 55 e0             	mov    -0x20(%rbp),%edx
+  40d488:	01 d0                	add    %edx,%eax
+  40d48a:	48 98                	cltq   
+  40d48c:	48 c1 e0 02          	shl    $0x2,%rax
+  40d490:	48 8d 50 fc          	lea    -0x4(%rax),%rdx
+  40d494:	48 8b 45 f8          	mov    -0x8(%rbp),%rax
+  40d498:	48 01 d0             	add    %rdx,%rax
+  40d49b:	f3 0f 10 08          	movss  (%rax),%xmm1
+	        if( my_abs(val) > threshold &&
+	           ((val > 0 && val >= currptr[c-1] && val >= currptr[c+1] &&
+	             val >= currptr[c-step-1] && val >= currptr[c-step] && val >= currptr[c-step+1] &&
+	             val >= currptr[c+step-1] && val >= currptr[c+step] && val >= currptr[c+step+1] &&
+	             val >= nextptr[c] && val >= nextptr[c-1] && val >= nextptr[c+1] &&
+	             val >= nextptr[c-step-1] && val >= nextptr[c-step] && val >= nextptr[c-step+1] &&
+  40d49f:	f3 0f 10 45 e4       	movss  -0x1c(%rbp),%xmm0
+  40d4a4:	0f 2e c1             	ucomiss %xmm1,%xmm0
+  40d4a7:	0f 82 d4 01 00 00    	jb     40d681 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x534>
+	             val >= nextptr[c+step-1] && val >= nextptr[c+step] && val >= nextptr[c+step+1] &&
+  40d4ad:	8b 45 38             	mov    0x38(%rbp),%eax
+  40d4b0:	8b 55 e0             	mov    -0x20(%rbp),%edx
+  40d4b3:	01 d0                	add    %edx,%eax
+  40d4b5:	48 98                	cltq   
+  40d4b7:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40d4be:	00 
+  40d4bf:	48 8b 45 f8          	mov    -0x8(%rbp),%rax
+  40d4c3:	48 01 d0             	add    %rdx,%rax
+  40d4c6:	f3 0f 10 08          	movss  (%rax),%xmm1
+  40d4ca:	f3 0f 10 45 e4       	movss  -0x1c(%rbp),%xmm0
+  40d4cf:	0f 2e c1             	ucomiss %xmm1,%xmm0
+  40d4d2:	0f 82 a9 01 00 00    	jb     40d681 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x534>
+  40d4d8:	8b 45 38             	mov    0x38(%rbp),%eax
+  40d4db:	8b 55 e0             	mov    -0x20(%rbp),%edx
+  40d4de:	01 d0                	add    %edx,%eax
+  40d4e0:	48 98                	cltq   
+  40d4e2:	48 83 c0 01          	add    $0x1,%rax
+  40d4e6:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40d4ed:	00 
+  40d4ee:	48 8b 45 f8          	mov    -0x8(%rbp),%rax
+  40d4f2:	48 01 d0             	add    %rdx,%rax
+  40d4f5:	f3 0f 10 08          	movss  (%rax),%xmm1
+  40d4f9:	f3 0f 10 45 e4       	movss  -0x1c(%rbp),%xmm0
+  40d4fe:	0f 2e c1             	ucomiss %xmm1,%xmm0
+  40d501:	0f 82 7a 01 00 00    	jb     40d681 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x534>
+	             val >= prevptr[c] && val >= prevptr[c-1] && val >= prevptr[c+1] &&
+  40d507:	8b 45 e0             	mov    -0x20(%rbp),%eax
+  40d50a:	48 98                	cltq   
+  40d50c:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40d513:	00 
+  40d514:	48 8b 45 f0          	mov    -0x10(%rbp),%rax
+  40d518:	48 01 d0             	add    %rdx,%rax
+  40d51b:	f3 0f 10 08          	movss  (%rax),%xmm1
+	           ((val > 0 && val >= currptr[c-1] && val >= currptr[c+1] &&
+	             val >= currptr[c-step-1] && val >= currptr[c-step] && val >= currptr[c-step+1] &&
+	             val >= currptr[c+step-1] && val >= currptr[c+step] && val >= currptr[c+step+1] &&
+	             val >= nextptr[c] && val >= nextptr[c-1] && val >= nextptr[c+1] &&
+	             val >= nextptr[c-step-1] && val >= nextptr[c-step] && val >= nextptr[c-step+1] &&
+	             val >= nextptr[c+step-1] && val >= nextptr[c+step] && val >= nextptr[c+step+1] &&
+  40d51f:	f3 0f 10 45 e4       	movss  -0x1c(%rbp),%xmm0
+  40d524:	0f 2e c1             	ucomiss %xmm1,%xmm0
+  40d527:	0f 82 54 01 00 00    	jb     40d681 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x534>
+	             val >= prevptr[c] && val >= prevptr[c-1] && val >= prevptr[c+1] &&
+  40d52d:	8b 45 e0             	mov    -0x20(%rbp),%eax
+  40d530:	48 98                	cltq   
+  40d532:	48 c1 e0 02          	shl    $0x2,%rax
+  40d536:	48 8d 50 fc          	lea    -0x4(%rax),%rdx
+  40d53a:	48 8b 45 f0          	mov    -0x10(%rbp),%rax
+  40d53e:	48 01 d0             	add    %rdx,%rax
+  40d541:	f3 0f 10 08          	movss  (%rax),%xmm1
+  40d545:	f3 0f 10 45 e4       	movss  -0x1c(%rbp),%xmm0
+  40d54a:	0f 2e c1             	ucomiss %xmm1,%xmm0
+  40d54d:	0f 82 2e 01 00 00    	jb     40d681 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x534>
+  40d553:	8b 45 e0             	mov    -0x20(%rbp),%eax
+  40d556:	48 98                	cltq   
+  40d558:	48 83 c0 01          	add    $0x1,%rax
+  40d55c:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40d563:	00 
+  40d564:	48 8b 45 f0          	mov    -0x10(%rbp),%rax
+  40d568:	48 01 d0             	add    %rdx,%rax
+  40d56b:	f3 0f 10 08          	movss  (%rax),%xmm1
+  40d56f:	f3 0f 10 45 e4       	movss  -0x1c(%rbp),%xmm0
+  40d574:	0f 2e c1             	ucomiss %xmm1,%xmm0
+  40d577:	0f 82 04 01 00 00    	jb     40d681 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x534>
+	             val >= prevptr[c-step-1] && val >= prevptr[c-step] && val >= prevptr[c-step+1] &&
+  40d57d:	8b 45 38             	mov    0x38(%rbp),%eax
+  40d580:	8b 55 e0             	mov    -0x20(%rbp),%edx
+  40d583:	29 c2                	sub    %eax,%edx
+  40d585:	89 d0                	mov    %edx,%eax
+  40d587:	48 98                	cltq   
+  40d589:	48 c1 e0 02          	shl    $0x2,%rax
+  40d58d:	48 8d 50 fc          	lea    -0x4(%rax),%rdx
+  40d591:	48 8b 45 f0          	mov    -0x10(%rbp),%rax
+  40d595:	48 01 d0             	add    %rdx,%rax
+  40d598:	f3 0f 10 08          	movss  (%rax),%xmm1
+	             val >= currptr[c-step-1] && val >= currptr[c-step] && val >= currptr[c-step+1] &&
+	             val >= currptr[c+step-1] && val >= currptr[c+step] && val >= currptr[c+step+1] &&
+	             val >= nextptr[c] && val >= nextptr[c-1] && val >= nextptr[c+1] &&
+	             val >= nextptr[c-step-1] && val >= nextptr[c-step] && val >= nextptr[c-step+1] &&
+	             val >= nextptr[c+step-1] && val >= nextptr[c+step] && val >= nextptr[c+step+1] &&
+	             val >= prevptr[c] && val >= prevptr[c-1] && val >= prevptr[c+1] &&
+  40d59c:	f3 0f 10 45 e4       	movss  -0x1c(%rbp),%xmm0
+  40d5a1:	0f 2e c1             	ucomiss %xmm1,%xmm0
+  40d5a4:	0f 82 d7 00 00 00    	jb     40d681 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x534>
+	             val >= prevptr[c-step-1] && val >= prevptr[c-step] && val >= prevptr[c-step+1] &&
+  40d5aa:	8b 45 38             	mov    0x38(%rbp),%eax
+  40d5ad:	8b 55 e0             	mov    -0x20(%rbp),%edx
+  40d5b0:	29 c2                	sub    %eax,%edx
+  40d5b2:	89 d0                	mov    %edx,%eax
+  40d5b4:	48 98                	cltq   
+  40d5b6:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40d5bd:	00 
+  40d5be:	48 8b 45 f0          	mov    -0x10(%rbp),%rax
+  40d5c2:	48 01 d0             	add    %rdx,%rax
+  40d5c5:	f3 0f 10 08          	movss  (%rax),%xmm1
+  40d5c9:	f3 0f 10 45 e4       	movss  -0x1c(%rbp),%xmm0
+  40d5ce:	0f 2e c1             	ucomiss %xmm1,%xmm0
+  40d5d1:	0f 82 aa 00 00 00    	jb     40d681 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x534>
+  40d5d7:	8b 45 38             	mov    0x38(%rbp),%eax
+  40d5da:	8b 55 e0             	mov    -0x20(%rbp),%edx
+  40d5dd:	29 c2                	sub    %eax,%edx
+  40d5df:	89 d0                	mov    %edx,%eax
+  40d5e1:	48 98                	cltq   
+  40d5e3:	48 83 c0 01          	add    $0x1,%rax
+  40d5e7:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40d5ee:	00 
+  40d5ef:	48 8b 45 f0          	mov    -0x10(%rbp),%rax
+  40d5f3:	48 01 d0             	add    %rdx,%rax
+  40d5f6:	f3 0f 10 08          	movss  (%rax),%xmm1
+  40d5fa:	f3 0f 10 45 e4       	movss  -0x1c(%rbp),%xmm0
+  40d5ff:	0f 2e c1             	ucomiss %xmm1,%xmm0
+  40d602:	72 7d                	jb     40d681 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x534>
+	             val >= prevptr[c+step-1] && val >= prevptr[c+step] && val >= prevptr[c+step+1]) ||
+  40d604:	8b 45 38             	mov    0x38(%rbp),%eax
+  40d607:	8b 55 e0             	mov    -0x20(%rbp),%edx
+  40d60a:	01 d0                	add    %edx,%eax
+  40d60c:	48 98                	cltq   
+  40d60e:	48 c1 e0 02          	shl    $0x2,%rax
+  40d612:	48 8d 50 fc          	lea    -0x4(%rax),%rdx
+  40d616:	48 8b 45 f0          	mov    -0x10(%rbp),%rax
+  40d61a:	48 01 d0             	add    %rdx,%rax
+  40d61d:	f3 0f 10 08          	movss  (%rax),%xmm1
+	             val >= currptr[c+step-1] && val >= currptr[c+step] && val >= currptr[c+step+1] &&
+	             val >= nextptr[c] && val >= nextptr[c-1] && val >= nextptr[c+1] &&
+	             val >= nextptr[c-step-1] && val >= nextptr[c-step] && val >= nextptr[c-step+1] &&
+	             val >= nextptr[c+step-1] && val >= nextptr[c+step] && val >= nextptr[c+step+1] &&
+	             val >= prevptr[c] && val >= prevptr[c-1] && val >= prevptr[c+1] &&
+	             val >= prevptr[c-step-1] && val >= prevptr[c-step] && val >= prevptr[c-step+1] &&
+  40d621:	f3 0f 10 45 e4       	movss  -0x1c(%rbp),%xmm0
+  40d626:	0f 2e c1             	ucomiss %xmm1,%xmm0
+  40d629:	72 56                	jb     40d681 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x534>
+	             val >= prevptr[c+step-1] && val >= prevptr[c+step] && val >= prevptr[c+step+1]) ||
+  40d62b:	8b 45 38             	mov    0x38(%rbp),%eax
+  40d62e:	8b 55 e0             	mov    -0x20(%rbp),%edx
+  40d631:	01 d0                	add    %edx,%eax
+  40d633:	48 98                	cltq   
+  40d635:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40d63c:	00 
+  40d63d:	48 8b 45 f0          	mov    -0x10(%rbp),%rax
+  40d641:	48 01 d0             	add    %rdx,%rax
+  40d644:	f3 0f 10 08          	movss  (%rax),%xmm1
+  40d648:	f3 0f 10 45 e4       	movss  -0x1c(%rbp),%xmm0
+  40d64d:	0f 2e c1             	ucomiss %xmm1,%xmm0
+  40d650:	72 2f                	jb     40d681 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x534>
+  40d652:	8b 45 38             	mov    0x38(%rbp),%eax
+  40d655:	8b 55 e0             	mov    -0x20(%rbp),%edx
+  40d658:	01 d0                	add    %edx,%eax
+  40d65a:	48 98                	cltq   
+  40d65c:	48 83 c0 01          	add    $0x1,%rax
+  40d660:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40d667:	00 
+  40d668:	48 8b 45 f0          	mov    -0x10(%rbp),%rax
+  40d66c:	48 01 d0             	add    %rdx,%rax
+  40d66f:	f3 0f 10 08          	movss  (%rax),%xmm1
+  40d673:	f3 0f 10 45 e4       	movss  -0x1c(%rbp),%xmm0
+  40d678:	0f 2e c1             	ucomiss %xmm1,%xmm0
+  40d67b:	0f 83 09 04 00 00    	jae    40da8a <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x93d>
+  40d681:	0f 57 c0             	xorps  %xmm0,%xmm0
+  40d684:	0f 2e 45 e4          	ucomiss -0x1c(%rbp),%xmm0
+  40d688:	0f 86 36 04 00 00    	jbe    40dac4 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x977>
+	            (val < 0 && val <= currptr[c-1] && val <= currptr[c+1] &&
+  40d68e:	8b 45 e0             	mov    -0x20(%rbp),%eax
+  40d691:	48 98                	cltq   
+  40d693:	48 c1 e0 02          	shl    $0x2,%rax
+  40d697:	48 8d 50 fc          	lea    -0x4(%rax),%rdx
+  40d69b:	48 8b 45 e8          	mov    -0x18(%rbp),%rax
+  40d69f:	48 01 d0             	add    %rdx,%rax
+  40d6a2:	f3 0f 10 00          	movss  (%rax),%xmm0
+  40d6a6:	0f 2e 45 e4          	ucomiss -0x1c(%rbp),%xmm0
+  40d6aa:	0f 82 14 04 00 00    	jb     40dac4 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x977>
+  40d6b0:	8b 45 e0             	mov    -0x20(%rbp),%eax
+  40d6b3:	48 98                	cltq   
+  40d6b5:	48 83 c0 01          	add    $0x1,%rax
+  40d6b9:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40d6c0:	00 
+  40d6c1:	48 8b 45 e8          	mov    -0x18(%rbp),%rax
+  40d6c5:	48 01 d0             	add    %rdx,%rax
+  40d6c8:	f3 0f 10 00          	movss  (%rax),%xmm0
+  40d6cc:	0f 2e 45 e4          	ucomiss -0x1c(%rbp),%xmm0
+  40d6d0:	0f 82 ee 03 00 00    	jb     40dac4 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x977>
+	             val <= currptr[c-step-1] && val <= currptr[c-step] && val <= currptr[c-step+1] &&
+  40d6d6:	8b 45 38             	mov    0x38(%rbp),%eax
+  40d6d9:	8b 55 e0             	mov    -0x20(%rbp),%edx
+  40d6dc:	29 c2                	sub    %eax,%edx
+  40d6de:	89 d0                	mov    %edx,%eax
+  40d6e0:	48 98                	cltq   
+  40d6e2:	48 c1 e0 02          	shl    $0x2,%rax
+  40d6e6:	48 8d 50 fc          	lea    -0x4(%rax),%rdx
+  40d6ea:	48 8b 45 e8          	mov    -0x18(%rbp),%rax
+  40d6ee:	48 01 d0             	add    %rdx,%rax
+  40d6f1:	f3 0f 10 00          	movss  (%rax),%xmm0
+	             val >= nextptr[c-step-1] && val >= nextptr[c-step] && val >= nextptr[c-step+1] &&
+	             val >= nextptr[c+step-1] && val >= nextptr[c+step] && val >= nextptr[c+step+1] &&
+	             val >= prevptr[c] && val >= prevptr[c-1] && val >= prevptr[c+1] &&
+	             val >= prevptr[c-step-1] && val >= prevptr[c-step] && val >= prevptr[c-step+1] &&
+	             val >= prevptr[c+step-1] && val >= prevptr[c+step] && val >= prevptr[c+step+1]) ||
+	            (val < 0 && val <= currptr[c-1] && val <= currptr[c+1] &&
+  40d6f5:	0f 2e 45 e4          	ucomiss -0x1c(%rbp),%xmm0
+  40d6f9:	0f 82 c5 03 00 00    	jb     40dac4 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x977>
+	             val <= currptr[c-step-1] && val <= currptr[c-step] && val <= currptr[c-step+1] &&
+  40d6ff:	8b 45 38             	mov    0x38(%rbp),%eax
+  40d702:	8b 55 e0             	mov    -0x20(%rbp),%edx
+  40d705:	29 c2                	sub    %eax,%edx
+  40d707:	89 d0                	mov    %edx,%eax
+  40d709:	48 98                	cltq   
+  40d70b:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40d712:	00 
+  40d713:	48 8b 45 e8          	mov    -0x18(%rbp),%rax
+  40d717:	48 01 d0             	add    %rdx,%rax
+  40d71a:	f3 0f 10 00          	movss  (%rax),%xmm0
+  40d71e:	0f 2e 45 e4          	ucomiss -0x1c(%rbp),%xmm0
+  40d722:	0f 82 9c 03 00 00    	jb     40dac4 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x977>
+  40d728:	8b 45 38             	mov    0x38(%rbp),%eax
+  40d72b:	8b 55 e0             	mov    -0x20(%rbp),%edx
+  40d72e:	29 c2                	sub    %eax,%edx
+  40d730:	89 d0                	mov    %edx,%eax
+  40d732:	48 98                	cltq   
+  40d734:	48 83 c0 01          	add    $0x1,%rax
+  40d738:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40d73f:	00 
+  40d740:	48 8b 45 e8          	mov    -0x18(%rbp),%rax
+  40d744:	48 01 d0             	add    %rdx,%rax
+  40d747:	f3 0f 10 00          	movss  (%rax),%xmm0
+  40d74b:	0f 2e 45 e4          	ucomiss -0x1c(%rbp),%xmm0
+  40d74f:	0f 82 6f 03 00 00    	jb     40dac4 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x977>
+	             val <= currptr[c+step-1] && val <= currptr[c+step] && val <= currptr[c+step+1] &&
+  40d755:	8b 45 38             	mov    0x38(%rbp),%eax
+  40d758:	8b 55 e0             	mov    -0x20(%rbp),%edx
+  40d75b:	01 d0                	add    %edx,%eax
+  40d75d:	48 98                	cltq   
+  40d75f:	48 c1 e0 02          	shl    $0x2,%rax
+  40d763:	48 8d 50 fc          	lea    -0x4(%rax),%rdx
+  40d767:	48 8b 45 e8          	mov    -0x18(%rbp),%rax
+  40d76b:	48 01 d0             	add    %rdx,%rax
+  40d76e:	f3 0f 10 00          	movss  (%rax),%xmm0
+	             val >= nextptr[c+step-1] && val >= nextptr[c+step] && val >= nextptr[c+step+1] &&
+	             val >= prevptr[c] && val >= prevptr[c-1] && val >= prevptr[c+1] &&
+	             val >= prevptr[c-step-1] && val >= prevptr[c-step] && val >= prevptr[c-step+1] &&
+	             val >= prevptr[c+step-1] && val >= prevptr[c+step] && val >= prevptr[c+step+1]) ||
+	            (val < 0 && val <= currptr[c-1] && val <= currptr[c+1] &&
+	             val <= currptr[c-step-1] && val <= currptr[c-step] && val <= currptr[c-step+1] &&
+  40d772:	0f 2e 45 e4          	ucomiss -0x1c(%rbp),%xmm0
+  40d776:	0f 82 48 03 00 00    	jb     40dac4 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x977>
+	             val <= currptr[c+step-1] && val <= currptr[c+step] && val <= currptr[c+step+1] &&
+  40d77c:	8b 45 38             	mov    0x38(%rbp),%eax
+  40d77f:	8b 55 e0             	mov    -0x20(%rbp),%edx
+  40d782:	01 d0                	add    %edx,%eax
+  40d784:	48 98                	cltq   
+  40d786:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40d78d:	00 
+  40d78e:	48 8b 45 e8          	mov    -0x18(%rbp),%rax
+  40d792:	48 01 d0             	add    %rdx,%rax
+  40d795:	f3 0f 10 00          	movss  (%rax),%xmm0
+  40d799:	0f 2e 45 e4          	ucomiss -0x1c(%rbp),%xmm0
+  40d79d:	0f 82 21 03 00 00    	jb     40dac4 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x977>
+  40d7a3:	8b 45 38             	mov    0x38(%rbp),%eax
+  40d7a6:	8b 55 e0             	mov    -0x20(%rbp),%edx
+  40d7a9:	01 d0                	add    %edx,%eax
+  40d7ab:	48 98                	cltq   
+  40d7ad:	48 83 c0 01          	add    $0x1,%rax
+  40d7b1:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40d7b8:	00 
+  40d7b9:	48 8b 45 e8          	mov    -0x18(%rbp),%rax
+  40d7bd:	48 01 d0             	add    %rdx,%rax
+  40d7c0:	f3 0f 10 00          	movss  (%rax),%xmm0
+  40d7c4:	0f 2e 45 e4          	ucomiss -0x1c(%rbp),%xmm0
+  40d7c8:	0f 82 f6 02 00 00    	jb     40dac4 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x977>
+	             val <= nextptr[c] && val <= nextptr[c-1] && val <= nextptr[c+1] &&
+  40d7ce:	8b 45 e0             	mov    -0x20(%rbp),%eax
+  40d7d1:	48 98                	cltq   
+  40d7d3:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40d7da:	00 
+  40d7db:	48 8b 45 f8          	mov    -0x8(%rbp),%rax
+  40d7df:	48 01 d0             	add    %rdx,%rax
+  40d7e2:	f3 0f 10 00          	movss  (%rax),%xmm0
+	             val >= prevptr[c] && val >= prevptr[c-1] && val >= prevptr[c+1] &&
+	             val >= prevptr[c-step-1] && val >= prevptr[c-step] && val >= prevptr[c-step+1] &&
+	             val >= prevptr[c+step-1] && val >= prevptr[c+step] && val >= prevptr[c+step+1]) ||
+	            (val < 0 && val <= currptr[c-1] && val <= currptr[c+1] &&
+	             val <= currptr[c-step-1] && val <= currptr[c-step] && val <= currptr[c-step+1] &&
+	             val <= currptr[c+step-1] && val <= currptr[c+step] && val <= currptr[c+step+1] &&
+  40d7e6:	0f 2e 45 e4          	ucomiss -0x1c(%rbp),%xmm0
+  40d7ea:	0f 82 d4 02 00 00    	jb     40dac4 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x977>
+	             val <= nextptr[c] && val <= nextptr[c-1] && val <= nextptr[c+1] &&
+  40d7f0:	8b 45 e0             	mov    -0x20(%rbp),%eax
+  40d7f3:	48 98                	cltq   
+  40d7f5:	48 c1 e0 02          	shl    $0x2,%rax
+  40d7f9:	48 8d 50 fc          	lea    -0x4(%rax),%rdx
+  40d7fd:	48 8b 45 f8          	mov    -0x8(%rbp),%rax
+  40d801:	48 01 d0             	add    %rdx,%rax
+  40d804:	f3 0f 10 00          	movss  (%rax),%xmm0
+  40d808:	0f 2e 45 e4          	ucomiss -0x1c(%rbp),%xmm0
+  40d80c:	0f 82 b2 02 00 00    	jb     40dac4 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x977>
+  40d812:	8b 45 e0             	mov    -0x20(%rbp),%eax
+  40d815:	48 98                	cltq   
+  40d817:	48 83 c0 01          	add    $0x1,%rax
+  40d81b:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40d822:	00 
+  40d823:	48 8b 45 f8          	mov    -0x8(%rbp),%rax
+  40d827:	48 01 d0             	add    %rdx,%rax
+  40d82a:	f3 0f 10 00          	movss  (%rax),%xmm0
+  40d82e:	0f 2e 45 e4          	ucomiss -0x1c(%rbp),%xmm0
+  40d832:	0f 82 8c 02 00 00    	jb     40dac4 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x977>
+	             val <= nextptr[c-step-1] && val <= nextptr[c-step] && val <= nextptr[c-step+1] &&
+  40d838:	8b 45 38             	mov    0x38(%rbp),%eax
+  40d83b:	8b 55 e0             	mov    -0x20(%rbp),%edx
+  40d83e:	29 c2                	sub    %eax,%edx
+  40d840:	89 d0                	mov    %edx,%eax
+  40d842:	48 98                	cltq   
+  40d844:	48 c1 e0 02          	shl    $0x2,%rax
+  40d848:	48 8d 50 fc          	lea    -0x4(%rax),%rdx
+  40d84c:	48 8b 45 f8          	mov    -0x8(%rbp),%rax
+  40d850:	48 01 d0             	add    %rdx,%rax
+  40d853:	f3 0f 10 00          	movss  (%rax),%xmm0
+	             val >= prevptr[c-step-1] && val >= prevptr[c-step] && val >= prevptr[c-step+1] &&
+	             val >= prevptr[c+step-1] && val >= prevptr[c+step] && val >= prevptr[c+step+1]) ||
+	            (val < 0 && val <= currptr[c-1] && val <= currptr[c+1] &&
+	             val <= currptr[c-step-1] && val <= currptr[c-step] && val <= currptr[c-step+1] &&
+	             val <= currptr[c+step-1] && val <= currptr[c+step] && val <= currptr[c+step+1] &&
+	             val <= nextptr[c] && val <= nextptr[c-1] && val <= nextptr[c+1] &&
+  40d857:	0f 2e 45 e4          	ucomiss -0x1c(%rbp),%xmm0
+  40d85b:	0f 82 63 02 00 00    	jb     40dac4 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x977>
+	             val <= nextptr[c-step-1] && val <= nextptr[c-step] && val <= nextptr[c-step+1] &&
+  40d861:	8b 45 38             	mov    0x38(%rbp),%eax
+  40d864:	8b 55 e0             	mov    -0x20(%rbp),%edx
+  40d867:	29 c2                	sub    %eax,%edx
+  40d869:	89 d0                	mov    %edx,%eax
+  40d86b:	48 98                	cltq   
+  40d86d:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40d874:	00 
+  40d875:	48 8b 45 f8          	mov    -0x8(%rbp),%rax
+  40d879:	48 01 d0             	add    %rdx,%rax
+  40d87c:	f3 0f 10 00          	movss  (%rax),%xmm0
+  40d880:	0f 2e 45 e4          	ucomiss -0x1c(%rbp),%xmm0
+  40d884:	0f 82 3a 02 00 00    	jb     40dac4 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x977>
+  40d88a:	8b 45 38             	mov    0x38(%rbp),%eax
+  40d88d:	8b 55 e0             	mov    -0x20(%rbp),%edx
+  40d890:	29 c2                	sub    %eax,%edx
+  40d892:	89 d0                	mov    %edx,%eax
+  40d894:	48 98                	cltq   
+  40d896:	48 83 c0 01          	add    $0x1,%rax
+  40d89a:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40d8a1:	00 
+  40d8a2:	48 8b 45 f8          	mov    -0x8(%rbp),%rax
+  40d8a6:	48 01 d0             	add    %rdx,%rax
+  40d8a9:	f3 0f 10 00          	movss  (%rax),%xmm0
+  40d8ad:	0f 2e 45 e4          	ucomiss -0x1c(%rbp),%xmm0
+  40d8b1:	0f 82 0d 02 00 00    	jb     40dac4 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x977>
+	             val <= nextptr[c+step-1] && val <= nextptr[c+step] && val <= nextptr[c+step+1] &&
+  40d8b7:	8b 45 38             	mov    0x38(%rbp),%eax
+  40d8ba:	8b 55 e0             	mov    -0x20(%rbp),%edx
+  40d8bd:	01 d0                	add    %edx,%eax
+  40d8bf:	48 98                	cltq   
+  40d8c1:	48 c1 e0 02          	shl    $0x2,%rax
+  40d8c5:	48 8d 50 fc          	lea    -0x4(%rax),%rdx
+  40d8c9:	48 8b 45 f8          	mov    -0x8(%rbp),%rax
+  40d8cd:	48 01 d0             	add    %rdx,%rax
+  40d8d0:	f3 0f 10 00          	movss  (%rax),%xmm0
+	             val >= prevptr[c+step-1] && val >= prevptr[c+step] && val >= prevptr[c+step+1]) ||
+	            (val < 0 && val <= currptr[c-1] && val <= currptr[c+1] &&
+	             val <= currptr[c-step-1] && val <= currptr[c-step] && val <= currptr[c-step+1] &&
+	             val <= currptr[c+step-1] && val <= currptr[c+step] && val <= currptr[c+step+1] &&
+	             val <= nextptr[c] && val <= nextptr[c-1] && val <= nextptr[c+1] &&
+	             val <= nextptr[c-step-1] && val <= nextptr[c-step] && val <= nextptr[c-step+1] &&
+  40d8d4:	0f 2e 45 e4          	ucomiss -0x1c(%rbp),%xmm0
+  40d8d8:	0f 82 e6 01 00 00    	jb     40dac4 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x977>
+	             val <= nextptr[c+step-1] && val <= nextptr[c+step] && val <= nextptr[c+step+1] &&
+  40d8de:	8b 45 38             	mov    0x38(%rbp),%eax
+  40d8e1:	8b 55 e0             	mov    -0x20(%rbp),%edx
+  40d8e4:	01 d0                	add    %edx,%eax
+  40d8e6:	48 98                	cltq   
+  40d8e8:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40d8ef:	00 
+  40d8f0:	48 8b 45 f8          	mov    -0x8(%rbp),%rax
+  40d8f4:	48 01 d0             	add    %rdx,%rax
+  40d8f7:	f3 0f 10 00          	movss  (%rax),%xmm0
+  40d8fb:	0f 2e 45 e4          	ucomiss -0x1c(%rbp),%xmm0
+  40d8ff:	0f 82 bf 01 00 00    	jb     40dac4 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x977>
+  40d905:	8b 45 38             	mov    0x38(%rbp),%eax
+  40d908:	8b 55 e0             	mov    -0x20(%rbp),%edx
+  40d90b:	01 d0                	add    %edx,%eax
+  40d90d:	48 98                	cltq   
+  40d90f:	48 83 c0 01          	add    $0x1,%rax
+  40d913:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40d91a:	00 
+  40d91b:	48 8b 45 f8          	mov    -0x8(%rbp),%rax
+  40d91f:	48 01 d0             	add    %rdx,%rax
+  40d922:	f3 0f 10 00          	movss  (%rax),%xmm0
+  40d926:	0f 2e 45 e4          	ucomiss -0x1c(%rbp),%xmm0
+  40d92a:	0f 82 94 01 00 00    	jb     40dac4 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x977>
+	             val <= prevptr[c] && val <= prevptr[c-1] && val <= prevptr[c+1] &&
+  40d930:	8b 45 e0             	mov    -0x20(%rbp),%eax
+  40d933:	48 98                	cltq   
+  40d935:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40d93c:	00 
+  40d93d:	48 8b 45 f0          	mov    -0x10(%rbp),%rax
+  40d941:	48 01 d0             	add    %rdx,%rax
+  40d944:	f3 0f 10 00          	movss  (%rax),%xmm0
+	            (val < 0 && val <= currptr[c-1] && val <= currptr[c+1] &&
+	             val <= currptr[c-step-1] && val <= currptr[c-step] && val <= currptr[c-step+1] &&
+	             val <= currptr[c+step-1] && val <= currptr[c+step] && val <= currptr[c+step+1] &&
+	             val <= nextptr[c] && val <= nextptr[c-1] && val <= nextptr[c+1] &&
+	             val <= nextptr[c-step-1] && val <= nextptr[c-step] && val <= nextptr[c-step+1] &&
+	             val <= nextptr[c+step-1] && val <= nextptr[c+step] && val <= nextptr[c+step+1] &&
+  40d948:	0f 2e 45 e4          	ucomiss -0x1c(%rbp),%xmm0
+  40d94c:	0f 82 72 01 00 00    	jb     40dac4 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x977>
+	             val <= prevptr[c] && val <= prevptr[c-1] && val <= prevptr[c+1] &&
+  40d952:	8b 45 e0             	mov    -0x20(%rbp),%eax
+  40d955:	48 98                	cltq   
+  40d957:	48 c1 e0 02          	shl    $0x2,%rax
+  40d95b:	48 8d 50 fc          	lea    -0x4(%rax),%rdx
+  40d95f:	48 8b 45 f0          	mov    -0x10(%rbp),%rax
+  40d963:	48 01 d0             	add    %rdx,%rax
+  40d966:	f3 0f 10 00          	movss  (%rax),%xmm0
+  40d96a:	0f 2e 45 e4          	ucomiss -0x1c(%rbp),%xmm0
+  40d96e:	0f 82 50 01 00 00    	jb     40dac4 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x977>
+  40d974:	8b 45 e0             	mov    -0x20(%rbp),%eax
+  40d977:	48 98                	cltq   
+  40d979:	48 83 c0 01          	add    $0x1,%rax
+  40d97d:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40d984:	00 
+  40d985:	48 8b 45 f0          	mov    -0x10(%rbp),%rax
+  40d989:	48 01 d0             	add    %rdx,%rax
+  40d98c:	f3 0f 10 00          	movss  (%rax),%xmm0
+  40d990:	0f 2e 45 e4          	ucomiss -0x1c(%rbp),%xmm0
+  40d994:	0f 82 2a 01 00 00    	jb     40dac4 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x977>
+	             val <= prevptr[c-step-1] && val <= prevptr[c-step] && val <= prevptr[c-step+1] &&
+  40d99a:	8b 45 38             	mov    0x38(%rbp),%eax
+  40d99d:	8b 55 e0             	mov    -0x20(%rbp),%edx
+  40d9a0:	29 c2                	sub    %eax,%edx
+  40d9a2:	89 d0                	mov    %edx,%eax
+  40d9a4:	48 98                	cltq   
+  40d9a6:	48 c1 e0 02          	shl    $0x2,%rax
+  40d9aa:	48 8d 50 fc          	lea    -0x4(%rax),%rdx
+  40d9ae:	48 8b 45 f0          	mov    -0x10(%rbp),%rax
+  40d9b2:	48 01 d0             	add    %rdx,%rax
+  40d9b5:	f3 0f 10 00          	movss  (%rax),%xmm0
+	             val <= currptr[c-step-1] && val <= currptr[c-step] && val <= currptr[c-step+1] &&
+	             val <= currptr[c+step-1] && val <= currptr[c+step] && val <= currptr[c+step+1] &&
+	             val <= nextptr[c] && val <= nextptr[c-1] && val <= nextptr[c+1] &&
+	             val <= nextptr[c-step-1] && val <= nextptr[c-step] && val <= nextptr[c-step+1] &&
+	             val <= nextptr[c+step-1] && val <= nextptr[c+step] && val <= nextptr[c+step+1] &&
+	             val <= prevptr[c] && val <= prevptr[c-1] && val <= prevptr[c+1] &&
+  40d9b9:	0f 2e 45 e4          	ucomiss -0x1c(%rbp),%xmm0
+  40d9bd:	0f 82 01 01 00 00    	jb     40dac4 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x977>
+	             val <= prevptr[c-step-1] && val <= prevptr[c-step] && val <= prevptr[c-step+1] &&
+  40d9c3:	8b 45 38             	mov    0x38(%rbp),%eax
+  40d9c6:	8b 55 e0             	mov    -0x20(%rbp),%edx
+  40d9c9:	29 c2                	sub    %eax,%edx
+  40d9cb:	89 d0                	mov    %edx,%eax
+  40d9cd:	48 98                	cltq   
+  40d9cf:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40d9d6:	00 
+  40d9d7:	48 8b 45 f0          	mov    -0x10(%rbp),%rax
+  40d9db:	48 01 d0             	add    %rdx,%rax
+  40d9de:	f3 0f 10 00          	movss  (%rax),%xmm0
+  40d9e2:	0f 2e 45 e4          	ucomiss -0x1c(%rbp),%xmm0
+  40d9e6:	0f 82 d8 00 00 00    	jb     40dac4 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x977>
+  40d9ec:	8b 45 38             	mov    0x38(%rbp),%eax
+  40d9ef:	8b 55 e0             	mov    -0x20(%rbp),%edx
+  40d9f2:	29 c2                	sub    %eax,%edx
+  40d9f4:	89 d0                	mov    %edx,%eax
+  40d9f6:	48 98                	cltq   
+  40d9f8:	48 83 c0 01          	add    $0x1,%rax
+  40d9fc:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40da03:	00 
+  40da04:	48 8b 45 f0          	mov    -0x10(%rbp),%rax
+  40da08:	48 01 d0             	add    %rdx,%rax
+  40da0b:	f3 0f 10 00          	movss  (%rax),%xmm0
+  40da0f:	0f 2e 45 e4          	ucomiss -0x1c(%rbp),%xmm0
+  40da13:	0f 82 ab 00 00 00    	jb     40dac4 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x977>
+	             val <= prevptr[c+step-1] && val <= prevptr[c+step] && val <= prevptr[c+step+1])))
+  40da19:	8b 45 38             	mov    0x38(%rbp),%eax
+  40da1c:	8b 55 e0             	mov    -0x20(%rbp),%edx
+  40da1f:	01 d0                	add    %edx,%eax
+  40da21:	48 98                	cltq   
+  40da23:	48 c1 e0 02          	shl    $0x2,%rax
+  40da27:	48 8d 50 fc          	lea    -0x4(%rax),%rdx
+  40da2b:	48 8b 45 f0          	mov    -0x10(%rbp),%rax
+  40da2f:	48 01 d0             	add    %rdx,%rax
+  40da32:	f3 0f 10 00          	movss  (%rax),%xmm0
+	             val <= currptr[c+step-1] && val <= currptr[c+step] && val <= currptr[c+step+1] &&
+	             val <= nextptr[c] && val <= nextptr[c-1] && val <= nextptr[c+1] &&
+	             val <= nextptr[c-step-1] && val <= nextptr[c-step] && val <= nextptr[c-step+1] &&
+	             val <= nextptr[c+step-1] && val <= nextptr[c+step] && val <= nextptr[c+step+1] &&
+	             val <= prevptr[c] && val <= prevptr[c-1] && val <= prevptr[c+1] &&
+	             val <= prevptr[c-step-1] && val <= prevptr[c-step] && val <= prevptr[c-step+1] &&
+  40da36:	0f 2e 45 e4          	ucomiss -0x1c(%rbp),%xmm0
+  40da3a:	0f 82 84 00 00 00    	jb     40dac4 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x977>
+	             val <= prevptr[c+step-1] && val <= prevptr[c+step] && val <= prevptr[c+step+1])))
+  40da40:	8b 45 38             	mov    0x38(%rbp),%eax
+  40da43:	8b 55 e0             	mov    -0x20(%rbp),%edx
+  40da46:	01 d0                	add    %edx,%eax
+  40da48:	48 98                	cltq   
+  40da4a:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40da51:	00 
+  40da52:	48 8b 45 f0          	mov    -0x10(%rbp),%rax
+  40da56:	48 01 d0             	add    %rdx,%rax
+  40da59:	f3 0f 10 00          	movss  (%rax),%xmm0
+  40da5d:	0f 2e 45 e4          	ucomiss -0x1c(%rbp),%xmm0
+  40da61:	72 61                	jb     40dac4 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x977>
+  40da63:	8b 45 38             	mov    0x38(%rbp),%eax
+  40da66:	8b 55 e0             	mov    -0x20(%rbp),%edx
+  40da69:	01 d0                	add    %edx,%eax
+  40da6b:	48 98                	cltq   
+  40da6d:	48 83 c0 01          	add    $0x1,%rax
+  40da71:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40da78:	00 
+  40da79:	48 8b 45 f0          	mov    -0x10(%rbp),%rax
+  40da7d:	48 01 d0             	add    %rdx,%rax
+  40da80:	f3 0f 10 00          	movss  (%rax),%xmm0
+  40da84:	0f 2e 45 e4          	ucomiss -0x1c(%rbp),%xmm0
+  40da88:	72 3a                	jb     40dac4 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x977>
+	        {
+	    	//Need r,c,i,o
+	            //int r1 = r, c1 = c, layer = i;
+			tempStorageLocation[totalPointsOfInterest_temp] = r;
+  40da8a:	8b 45 d8             	mov    -0x28(%rbp),%eax
+  40da8d:	48 98                	cltq   
+  40da8f:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40da96:	00 
+  40da97:	48 8b 45 18          	mov    0x18(%rbp),%rax
+  40da9b:	48 01 c2             	add    %rax,%rdx
+  40da9e:	8b 45 dc             	mov    -0x24(%rbp),%eax
+  40daa1:	89 02                	mov    %eax,(%rdx)
+			tempStorageLocation[totalPointsOfInterest_temp+1] = c;
+  40daa3:	8b 45 d8             	mov    -0x28(%rbp),%eax
+  40daa6:	48 98                	cltq   
+  40daa8:	48 83 c0 01          	add    $0x1,%rax
+  40daac:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40dab3:	00 
+  40dab4:	48 8b 45 18          	mov    0x18(%rbp),%rax
+  40dab8:	48 01 c2             	add    %rax,%rdx
+  40dabb:	8b 45 e0             	mov    -0x20(%rbp),%eax
+  40dabe:	89 02                	mov    %eax,(%rdx)
+			totalPointsOfInterest_temp = totalPointsOfInterest_temp + 2;
+  40dac0:	83 45 d8 02          	addl   $0x2,-0x28(%rbp)
+	    //const sift_wt* prevptr = prev.ptr<sift_wt>(r);
+	    const float* prevptr = (float *)(prevptr_data + prevptr_int*r);
+	    //const sift_wt* nextptr = next.ptr<sift_wt>(r);
+	    const float* nextptr = (float *)(nextptr_data + nextptr_int*r);
+	    //printf("Starting \n");
+	    for( int c = SIFT_IMG_BORDER; c < cols-SIFT_IMG_BORDER; c++)
+  40dac4:	83 45 e0 01          	addl   $0x1,-0x20(%rbp)
+  40dac8:	8b 45 30             	mov    0x30(%rbp),%eax
+  40dacb:	83 e8 05             	sub    $0x5,%eax
+  40dace:	3b 45 e0             	cmp    -0x20(%rbp),%eax
+  40dad1:	0f 8f ee f6 ff ff    	jg     40d1c5 <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x78>
+//void kernel_extrema(float* currptr, float* prevptr, float* nextptr)
+void kernel_extrema(uchar* currptr_data, int currptr_int,uchar* prevptr_data, int prevptr_int, uchar* nextptr_data, int nextptr_int, int threshold, int* tempStorageLocation, int& totalPointsOfInterest, int rows, int cols, int step)
+{
+	//printf("Kernel Extrema\n");
+	int totalPointsOfInterest_temp = 0;
+	for( int r = SIFT_IMG_BORDER; r < rows-SIFT_IMG_BORDER; r++)
+  40dad7:	83 45 dc 01          	addl   $0x1,-0x24(%rbp)
+  40dadb:	8b 45 28             	mov    0x28(%rbp),%eax
+  40dade:	83 e8 05             	sub    $0x5,%eax
+  40dae1:	3b 45 dc             	cmp    -0x24(%rbp),%eax
+  40dae4:	0f 8f 90 f6 ff ff    	jg     40d17a <_Z14kernel_extremaPhiS_iS_iiPiRiiii+0x2d>
+	            
+	        }
+	    }
+	    //printf("Over %d\n",totalPointsOfInterest_temp);
+	}
+	totalPointsOfInterest = totalPointsOfInterest_temp;
+  40daea:	48 8b 45 20          	mov    0x20(%rbp),%rax
+  40daee:	8b 55 d8             	mov    -0x28(%rbp),%edx
+  40daf1:	89 10                	mov    %edx,(%rax)
+	//printf("Points of interest are %d\n",totalPointsOfInterest_temp);
+}
+

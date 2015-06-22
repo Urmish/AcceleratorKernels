@@ -171,8 +171,10 @@ public:
     virtual int start(const Mat& src, const Rect& srcRoi=Rect(0,0,-1,-1),
                       bool isolated=false, int maxBufRows=-1);
     //! processes the next srcCount rows of the image.
+    //virtual int proceed(const uchar* src, int srcStep, int srcCount,
+    //                    uchar* dst, int dstStep);
     virtual int proceed(const uchar* src, int srcStep, int srcCount,
-                        uchar* dst, int dstStep);
+                        uchar* dst, int dstStep, int esz, int bufRows, int cn ,const float* kf, const uchar** kp, int nz, const Point* pt, uchar** brows, uchar* ringbuf_s, uchar* constBorderRow_s, float _delta, const int* btab );
     //! applies filter to the specified ROI of the image. if srcRoi=(0,0,-1,-1), the whole image is filtered.
     virtual void apply( const Mat& src, Mat& dst,
                         const Rect& srcRoi=Rect(0,0,-1,-1),
@@ -444,22 +446,29 @@ int FilterEngine2::remainingOutputRows() const
     return roi.height - dstY;
 }
 
+//int FilterEngine2::proceed( const uchar* src, int srcstep, int count,
+//                           uchar* dst, int dststep )
 int FilterEngine2::proceed( const uchar* src, int srcstep, int count,
-                           uchar* dst, int dststep )
+                           uchar* dst, int dststep , int esz, int bufRows, int cn, const float* kf, const uchar** kp, int nz ,const Point* pt, uchar** brows, uchar* ringbuf_s, uchar* constBorderRow_s, float _delta, const int *btab)
 {
     //CV_Assert( wholeSize.width > 0 && wholeSize.height > 0 );
 
-    const int *btab = &borderTab[0];
-    int esz = (int)getElemSize(srcType); //Input to Kernel
+    //const int *btab = &borderTab[0];
+    //int esz = (int)getElemSize(srcType); //Input to Kernel
     int btab_esz = borderElemSize;
-    uchar** brows = &rows[0];
-    int bufRows = (int)rows.size(); //Input to Kernels
-    int cn = CV_MAT_CN(bufType); //Input to Kernel
+    //uchar** brows = &rows[0];
+    //int bufRows = (int)rows.size(); //Input to Kernels
+    //int cn = CV_MAT_CN(bufType); //Input to Kernel
     int width = roi.width, kwidth = ksize.width; //Input to Kernel
     int kheight = ksize.height, ay = anchor.y; //Input to Kernel
     int _dx1 = dx1, _dx2 = dx2;
     int width1 = roi.width + kwidth - 1;  //Input to Kernel
-    int xofs1 = std::min(roi.x, anchor.x); //Input to kernel
+    //int xofs1 = std::min(roi.x, anchor.x); //Input to kernel
+    int xofs1;
+    if (roi.x <= anchor.x)
+	xofs1 = roi.x;
+    else
+	xofs1 = anchor.x;
     //bool isSep = isSeparable();
     bool isSep = 0;
   
@@ -487,8 +496,9 @@ int FilterEngine2::proceed( const uchar* src, int srcstep, int count,
         {
             int bi = (startY - startY0 + rowCount) % bufRows;
             //uchar* brow = alignPtr(&ringBuf[0], VEC_ALIGN) + bi*bufStep;
-            uchar* brow = (uchar*)( ((long int )&ringBuf[0] + VEC_ALIGN - 1) & ~(long int )(VEC_ALIGN-1))   +  bi*bufStep;
-            uchar* row = isSep ? &srcRow[0] : brow;
+            uchar* brow = (uchar*)( ((long int )ringbuf_s + VEC_ALIGN - 1) & ~(long int )(VEC_ALIGN-1))   +  bi*bufStep;
+            //uchar* row = isSep ? &srcRow[0] : brow;
+            uchar* row = brow;
 
             //printf("StartY %d\n",startY);
 
@@ -607,7 +617,7 @@ int FilterEngine2::proceed( const uchar* src, int srcstep, int count,
 
             if( srcY < 0 ) // can happen only with constant border type
                 //brows[i] = alignPtr(&constBorderRow[0], VEC_ALIGN);
-                brows[i] = (uchar *) ( ((long int)&constBorderRow[0] + VEC_ALIGN - 1) & ~(long int)(VEC_ALIGN-1) ) ;
+                brows[i] = (uchar *) ( ((long int)constBorderRow_s + VEC_ALIGN - 1) & ~(long int)(VEC_ALIGN-1) ) ;
             else
             {
 	        //printf("%d %d \n",srcY,startY);
@@ -615,7 +625,7 @@ int FilterEngine2::proceed( const uchar* src, int srcstep, int count,
                 if( srcY >= startY + rowCount )
                     break;
                 int bi = (srcY - startY0) % bufRows;
-                brows[i] = (uchar *) ( ((long int)&ringBuf[0] + VEC_ALIGN - 1) & ~(long int)(VEC_ALIGN-1) ) + bi*bufStep    ;
+                brows[i] = (uchar *) ( ((long int)ringbuf_s + VEC_ALIGN - 1) & ~(long int)(VEC_ALIGN-1) ) + bi*bufStep    ;
             }
         }
         if( i < kheight )
@@ -631,13 +641,13 @@ int FilterEngine2::proceed( const uchar* src, int srcstep, int count,
 	        //const uchar** kp = (const uchar**)&ptrs[0];
 	        //float _delta = delta;
 	        
-	        float _delta = (const float)(filter2D->delta);
+	        //float _delta = (const float)(filter2D->delta);
 	        //const Point* pt = &coords[0];
-	        const Point* pt = &(filter2D->coords[0]);
-	        const float* kf = (const float*)&(filter2D->coeffs[0]);
-	        const uchar** kp = (const uchar**)&(filter2D->ptrs[0]);
+	        //const Point* pt = &(filter2D->coords[0]);
+	        //const float* kf = (const float*)&(filter2D->coeffs[0]); //Input to kernel
+	        //const uchar** kp = (const uchar**)&(filter2D->ptrs[0]); //Input to kernel 
 	        int i_ko, k_ko;
-	        int nz = (int)((filter2D->coords).size());
+	       // int nz = (int)((filter2D->coords).size());
 	    
 	        int width_ko = roi.width;
 		width_ko *= cn;
@@ -692,8 +702,9 @@ void FilterEngine2::apply(const Mat& src, Mat& dst,
     //printf("APPLY 3\n");
     int y = start(src, srcRoi, isolated);
     //printf("Calling Proceed\n");
-    proceed( src.data + y*src.step, (int)src.step, endY - startY,
-             dst.data + dstOfs.y*dst.step + dstOfs.x*dst.elemSize(), (int)dst.step );
+    //proceed( src.data + y*src.step, (int)src.step, endY - startY,
+    //         dst.data + dstOfs.y*dst.step + dstOfs.x*dst.elemSize(), (int)dst.step );
+    proceed( src.data + y*src.step, (int)src.step, endY - startY, dst.data + dstOfs.y*dst.step + dstOfs.x*dst.elemSize(), (int)dst.step, (int)getElemSize(srcType ), (int)rows.size(), CV_MAT_CN(bufType),(const float*)&(filter2D->coeffs[0]),(const uchar**)&(filter2D->ptrs[0]), (int)((filter2D->coords).size()), &(filter2D->coords[0]) ,&rows[0] ,&ringBuf[0], &constBorderRow[0], (const float)(filter2D->delta) , &borderTab[0] );
 }
 
 

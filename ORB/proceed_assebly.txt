@@ -1,0 +1,1062 @@
+//int FilterEngine2::proceed( const uchar* src, int srcstep, int count,
+//                           uchar* dst, int dststep )
+int FilterEngine2::proceed( const uchar* src, int srcstep, int count,
+                           uchar* dst, int dststep , int esz, int bufRows, int cn, const float* kf, const uchar** kp, int nz ,const Point* pt, uchar** brows, uchar* ringbuf_s, uchar* constBorderRow_s, float _delta, const int *btab)
+{
+  40cc58:	55                   	push   %rbp
+  40cc59:	48 89 e5             	mov    %rsp,%rbp
+  40cc5c:	48 81 ec a0 00 00 00 	sub    $0xa0,%rsp
+  40cc63:	48 89 bd 08 ff ff ff 	mov    %rdi,-0xf8(%rbp)
+  40cc6a:	48 89 b5 00 ff ff ff 	mov    %rsi,-0x100(%rbp)
+  40cc71:	89 95 fc fe ff ff    	mov    %edx,-0x104(%rbp)
+  40cc77:	89 8d f8 fe ff ff    	mov    %ecx,-0x108(%rbp)
+  40cc7d:	4c 89 85 f0 fe ff ff 	mov    %r8,-0x110(%rbp)
+  40cc84:	44 89 8d ec fe ff ff 	mov    %r9d,-0x114(%rbp)
+  40cc8b:	f3 0f 11 85 e8 fe ff 	movss  %xmm0,-0x118(%rbp)
+  40cc92:	ff 
+    //CV_Assert( wholeSize.width > 0 && wholeSize.height > 0 );
+
+    //const int *btab = &borderTab[0];
+    //int esz = (int)getElemSize(srcType); //Input to Kernel
+    int btab_esz = borderElemSize;
+  40cc93:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40cc9a:	8b 40 68             	mov    0x68(%rax),%eax
+  40cc9d:	89 85 48 ff ff ff    	mov    %eax,-0xb8(%rbp)
+    //uchar** brows = &rows[0];
+    //int bufRows = (int)rows.size(); //Input to Kernels
+    //int cn = CV_MAT_CN(bufType); //Input to Kernel
+    int width = roi.width, kwidth = ksize.width; //Input to Kernel
+  40cca3:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40ccaa:	8b 40 38             	mov    0x38(%rax),%eax
+  40ccad:	89 85 4c ff ff ff    	mov    %eax,-0xb4(%rbp)
+  40ccb3:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40ccba:	8b 40 14             	mov    0x14(%rax),%eax
+  40ccbd:	89 85 50 ff ff ff    	mov    %eax,-0xb0(%rbp)
+    int kheight = ksize.height, ay = anchor.y; //Input to Kernel
+  40ccc3:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40ccca:	8b 40 18             	mov    0x18(%rax),%eax
+  40cccd:	89 85 54 ff ff ff    	mov    %eax,-0xac(%rbp)
+  40ccd3:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40ccda:	8b 40 20             	mov    0x20(%rax),%eax
+  40ccdd:	89 85 58 ff ff ff    	mov    %eax,-0xa8(%rbp)
+    int _dx1 = dx1, _dx2 = dx2;
+  40cce3:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40ccea:	8b 40 40             	mov    0x40(%rax),%eax
+  40cced:	89 85 5c ff ff ff    	mov    %eax,-0xa4(%rbp)
+  40ccf3:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40ccfa:	8b 40 44             	mov    0x44(%rax),%eax
+  40ccfd:	89 85 60 ff ff ff    	mov    %eax,-0xa0(%rbp)
+    int width1 = roi.width + kwidth - 1;  //Input to Kernel
+  40cd03:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40cd0a:	8b 50 38             	mov    0x38(%rax),%edx
+  40cd0d:	8b 85 50 ff ff ff    	mov    -0xb0(%rbp),%eax
+  40cd13:	01 d0                	add    %edx,%eax
+  40cd15:	83 e8 01             	sub    $0x1,%eax
+  40cd18:	89 85 64 ff ff ff    	mov    %eax,-0x9c(%rbp)
+    //int xofs1 = std::min(roi.x, anchor.x); //Input to kernel
+    int xofs1;
+    if (roi.x <= anchor.x)
+  40cd1e:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40cd25:	8b 50 30             	mov    0x30(%rax),%edx
+  40cd28:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40cd2f:	8b 40 1c             	mov    0x1c(%rax),%eax
+  40cd32:	39 c2                	cmp    %eax,%edx
+  40cd34:	7f 12                	jg     40cd48 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0xf0>
+	xofs1 = roi.x;
+  40cd36:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40cd3d:	8b 40 30             	mov    0x30(%rax),%eax
+  40cd40:	89 85 20 ff ff ff    	mov    %eax,-0xe0(%rbp)
+  40cd46:	eb 10                	jmp    40cd58 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x100>
+    else
+	xofs1 = anchor.x;
+  40cd48:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40cd4f:	8b 40 1c             	mov    0x1c(%rax),%eax
+  40cd52:	89 85 20 ff ff ff    	mov    %eax,-0xe0(%rbp)
+    //bool isSep = isSeparable();
+    bool isSep = 0;
+  40cd58:	c6 85 1e ff ff ff 00 	movb   $0x0,-0xe2(%rbp)
+  
+    bool makeBorder = (_dx1 > 0 || _dx2 > 0) && rowBorderType != BORDER_CONSTANT;
+  40cd5f:	83 bd 5c ff ff ff 00 	cmpl   $0x0,-0xa4(%rbp)
+  40cd66:	7f 09                	jg     40cd71 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x119>
+  40cd68:	83 bd 60 ff ff ff 00 	cmpl   $0x0,-0xa0(%rbp)
+  40cd6f:	7e 15                	jle    40cd86 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x12e>
+  40cd71:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40cd78:	8b 40 48             	mov    0x48(%rax),%eax
+  40cd7b:	85 c0                	test   %eax,%eax
+  40cd7d:	74 07                	je     40cd86 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x12e>
+  40cd7f:	b8 01 00 00 00       	mov    $0x1,%eax
+  40cd84:	eb 05                	jmp    40cd8b <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x133>
+  40cd86:	b8 00 00 00 00       	mov    $0x0,%eax
+  40cd8b:	88 85 1f ff ff ff    	mov    %al,-0xe1(%rbp)
+    int dy = 0, i = 0;
+  40cd91:	c7 85 24 ff ff ff 00 	movl   $0x0,-0xdc(%rbp)
+  40cd98:	00 00 00 
+  40cd9b:	c7 85 28 ff ff ff 00 	movl   $0x0,-0xd8(%rbp)
+  40cda2:	00 00 00 
+
+    src -= xofs1*esz;
+  40cda5:	8b 85 20 ff ff ff    	mov    -0xe0(%rbp),%eax
+  40cdab:	0f af 45 10          	imul   0x10(%rbp),%eax
+  40cdaf:	48 98                	cltq   
+  40cdb1:	48 f7 d8             	neg    %rax
+  40cdb4:	48 01 85 00 ff ff ff 	add    %rax,-0x100(%rbp)
+ //   count = std::min(count, remainingInputRows()); 
+    if ( endY - startY - rowCount < count)
+  40cdbb:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40cdc2:	8b 90 dc 00 00 00    	mov    0xdc(%rax),%edx
+  40cdc8:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40cdcf:	8b 80 d4 00 00 00    	mov    0xd4(%rax),%eax
+  40cdd5:	29 c2                	sub    %eax,%edx
+  40cdd7:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40cdde:	8b 80 e0 00 00 00    	mov    0xe0(%rax),%eax
+  40cde4:	29 c2                	sub    %eax,%edx
+  40cde6:	89 d0                	mov    %edx,%eax
+  40cde8:	3b 85 f8 fe ff ff    	cmp    -0x108(%rbp),%eax
+  40cdee:	7d 33                	jge    40ce23 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x1cb>
+	count =  endY - startY - rowCount;
+  40cdf0:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40cdf7:	8b 90 dc 00 00 00    	mov    0xdc(%rax),%edx
+  40cdfd:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40ce04:	8b 80 d4 00 00 00    	mov    0xd4(%rax),%eax
+  40ce0a:	29 c2                	sub    %eax,%edx
+  40ce0c:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40ce13:	8b 80 e0 00 00 00    	mov    0xe0(%rax),%eax
+  40ce19:	29 c2                	sub    %eax,%edx
+  40ce1b:	89 d0                	mov    %edx,%eax
+  40ce1d:	89 85 f8 fe ff ff    	mov    %eax,-0x108(%rbp)
+
+    //CV_Assert( src && dst && count > 0 );
+
+    for(;; dst += dststep*i, dy += i)
+    {
+        int dcount = bufRows - ay - startY - rowCount + roi.y;
+  40ce23:	8b 85 58 ff ff ff    	mov    -0xa8(%rbp),%eax
+  40ce29:	8b 55 18             	mov    0x18(%rbp),%edx
+  40ce2c:	29 c2                	sub    %eax,%edx
+  40ce2e:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40ce35:	8b 80 d4 00 00 00    	mov    0xd4(%rax),%eax
+  40ce3b:	29 c2                	sub    %eax,%edx
+  40ce3d:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40ce44:	8b 80 e0 00 00 00    	mov    0xe0(%rax),%eax
+  40ce4a:	29 c2                	sub    %eax,%edx
+  40ce4c:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40ce53:	8b 40 34             	mov    0x34(%rax),%eax
+  40ce56:	01 d0                	add    %edx,%eax
+  40ce58:	89 85 2c ff ff ff    	mov    %eax,-0xd4(%rbp)
+        dcount = dcount > 0 ? dcount : bufRows - kheight + 1;	
+  40ce5e:	83 bd 2c ff ff ff 00 	cmpl   $0x0,-0xd4(%rbp)
+  40ce65:	7f 12                	jg     40ce79 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x221>
+  40ce67:	8b 85 54 ff ff ff    	mov    -0xac(%rbp),%eax
+  40ce6d:	8b 55 18             	mov    0x18(%rbp),%edx
+  40ce70:	29 c2                	sub    %eax,%edx
+  40ce72:	89 d0                	mov    %edx,%eax
+  40ce74:	83 c0 01             	add    $0x1,%eax
+  40ce77:	eb 06                	jmp    40ce7f <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x227>
+  40ce79:	8b 85 2c ff ff ff    	mov    -0xd4(%rbp),%eax
+  40ce7f:	89 85 2c ff ff ff    	mov    %eax,-0xd4(%rbp)
+	if (dcount < count)
+  40ce85:	8b 85 2c ff ff ff    	mov    -0xd4(%rbp),%eax
+  40ce8b:	3b 85 f8 fe ff ff    	cmp    -0x108(%rbp),%eax
+  40ce91:	7d 0c                	jge    40ce9f <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x247>
+		dcount  = count;
+  40ce93:	8b 85 f8 fe ff ff    	mov    -0x108(%rbp),%eax
+  40ce99:	89 85 2c ff ff ff    	mov    %eax,-0xd4(%rbp)
+
+        //dcount = std::min(dcount, count);
+        count -= dcount;
+  40ce9f:	8b 85 2c ff ff ff    	mov    -0xd4(%rbp),%eax
+  40cea5:	29 85 f8 fe ff ff    	sub    %eax,-0x108(%rbp)
+        for( ; dcount-- > 0; src += srcstep )
+  40ceab:	e9 13 04 00 00       	jmpq   40d2c3 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x66b>
+        {
+            int bi = (startY - startY0 + rowCount) % bufRows;
+  40ceb0:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40ceb7:	8b 90 d4 00 00 00    	mov    0xd4(%rax),%edx
+  40cebd:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40cec4:	8b 80 d8 00 00 00    	mov    0xd8(%rax),%eax
+  40ceca:	29 c2                	sub    %eax,%edx
+  40cecc:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40ced3:	8b 80 e0 00 00 00    	mov    0xe0(%rax),%eax
+  40ced9:	01 d0                	add    %edx,%eax
+  40cedb:	99                   	cltd   
+  40cedc:	f7 7d 18             	idivl  0x18(%rbp)
+  40cedf:	89 95 68 ff ff ff    	mov    %edx,-0x98(%rbp)
+            //uchar* brow = alignPtr(&ringBuf[0], VEC_ALIGN) + bi*bufStep;
+            uchar* brow = (uchar*)( ((long int )ringbuf_s + VEC_ALIGN - 1) & ~(long int )(VEC_ALIGN-1))   +  bi*bufStep;
+  40cee5:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40ceec:	8b 80 d0 00 00 00    	mov    0xd0(%rax),%eax
+  40cef2:	0f af 85 68 ff ff ff 	imul   -0x98(%rbp),%eax
+  40cef9:	48 98                	cltq   
+  40cefb:	48 8b 55 50          	mov    0x50(%rbp),%rdx
+  40ceff:	48 83 c2 0f          	add    $0xf,%rdx
+  40cf03:	48 83 e2 f0          	and    $0xfffffffffffffff0,%rdx
+  40cf07:	48 01 d0             	add    %rdx,%rax
+  40cf0a:	48 89 45 a0          	mov    %rax,-0x60(%rbp)
+            //uchar* row = isSep ? &srcRow[0] : brow;
+            uchar* row = brow;
+  40cf0e:	48 8b 45 a0          	mov    -0x60(%rbp),%rax
+  40cf12:	48 89 45 a8          	mov    %rax,-0x58(%rbp)
+
+            //printf("StartY %d\n",startY);
+
+            if( ++rowCount > bufRows )
+  40cf16:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40cf1d:	8b 80 e0 00 00 00    	mov    0xe0(%rax),%eax
+  40cf23:	8d 50 01             	lea    0x1(%rax),%edx
+  40cf26:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40cf2d:	89 90 e0 00 00 00    	mov    %edx,0xe0(%rax)
+  40cf33:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40cf3a:	8b 80 e0 00 00 00    	mov    0xe0(%rax),%eax
+  40cf40:	3b 45 18             	cmp    0x18(%rbp),%eax
+  40cf43:	0f 9f c0             	setg   %al
+  40cf46:	84 c0                	test   %al,%al
+  40cf48:	74 3a                	je     40cf84 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x32c>
+            {
+                --rowCount;
+  40cf4a:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40cf51:	8b 80 e0 00 00 00    	mov    0xe0(%rax),%eax
+  40cf57:	8d 50 ff             	lea    -0x1(%rax),%edx
+  40cf5a:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40cf61:	89 90 e0 00 00 00    	mov    %edx,0xe0(%rax)
+                ++startY;
+  40cf67:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40cf6e:	8b 80 d4 00 00 00    	mov    0xd4(%rax),%eax
+  40cf74:	8d 50 01             	lea    0x1(%rax),%edx
+  40cf77:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40cf7e:	89 90 d4 00 00 00    	mov    %edx,0xd4(%rax)
+            }
+
+        //    memcpy( row + _dx1*esz, src, (width1 - _dx2 - _dx1)*esz );
+	    size_t memcpy_i;
+	    void * memcpy_dst = row + _dx1*esz;
+  40cf84:	8b 85 5c ff ff ff    	mov    -0xa4(%rbp),%eax
+  40cf8a:	0f af 45 10          	imul   0x10(%rbp),%eax
+  40cf8e:	48 63 d0             	movslq %eax,%rdx
+  40cf91:	48 8b 45 a8          	mov    -0x58(%rbp),%rax
+  40cf95:	48 01 d0             	add    %rdx,%rax
+  40cf98:	48 89 45 b0          	mov    %rax,-0x50(%rbp)
+            void * memcpy_src = (void *)src;
+  40cf9c:	48 8b 85 00 ff ff ff 	mov    -0x100(%rbp),%rax
+  40cfa3:	48 89 45 b8          	mov    %rax,-0x48(%rbp)
+	    size_t memcpy_len =  (width1 - _dx2 - _dx1)*esz;
+  40cfa7:	8b 85 60 ff ff ff    	mov    -0xa0(%rbp),%eax
+  40cfad:	8b 95 64 ff ff ff    	mov    -0x9c(%rbp),%edx
+  40cfb3:	29 c2                	sub    %eax,%edx
+  40cfb5:	89 d0                	mov    %edx,%eax
+  40cfb7:	2b 85 5c ff ff ff    	sub    -0xa4(%rbp),%eax
+  40cfbd:	0f af 45 10          	imul   0x10(%rbp),%eax
+  40cfc1:	48 98                	cltq   
+  40cfc3:	48 89 45 c0          	mov    %rax,-0x40(%rbp)
+            if ((uintptr_t)memcpy_dst % sizeof(long) == 0 &&
+  40cfc7:	48 8b 45 b0          	mov    -0x50(%rbp),%rax
+  40cfcb:	83 e0 07             	and    $0x7,%eax
+  40cfce:	48 85 c0             	test   %rax,%rax
+  40cfd1:	75 73                	jne    40d046 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x3ee>
+            	(uintptr_t)memcpy_src % sizeof(long) == 0 &&
+  40cfd3:	48 8b 45 b8          	mov    -0x48(%rbp),%rax
+  40cfd7:	83 e0 07             	and    $0x7,%eax
+        //    memcpy( row + _dx1*esz, src, (width1 - _dx2 - _dx1)*esz );
+	    size_t memcpy_i;
+	    void * memcpy_dst = row + _dx1*esz;
+            void * memcpy_src = (void *)src;
+	    size_t memcpy_len =  (width1 - _dx2 - _dx1)*esz;
+            if ((uintptr_t)memcpy_dst % sizeof(long) == 0 &&
+  40cfda:	48 85 c0             	test   %rax,%rax
+  40cfdd:	75 67                	jne    40d046 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x3ee>
+            	(uintptr_t)memcpy_src % sizeof(long) == 0 &&
+            	memcpy_len % sizeof(long) == 0) 
+  40cfdf:	48 8b 45 c0          	mov    -0x40(%rbp),%rax
+  40cfe3:	83 e0 07             	and    $0x7,%eax
+	    size_t memcpy_i;
+	    void * memcpy_dst = row + _dx1*esz;
+            void * memcpy_src = (void *)src;
+	    size_t memcpy_len =  (width1 - _dx2 - _dx1)*esz;
+            if ((uintptr_t)memcpy_dst % sizeof(long) == 0 &&
+            	(uintptr_t)memcpy_src % sizeof(long) == 0 &&
+  40cfe6:	48 85 c0             	test   %rax,%rax
+  40cfe9:	75 5b                	jne    40d046 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x3ee>
+            	memcpy_len % sizeof(long) == 0) 
+	    {
+
+                long *d = (long *)memcpy_dst;
+  40cfeb:	48 8b 45 b0          	mov    -0x50(%rbp),%rax
+  40cfef:	48 89 45 c8          	mov    %rax,-0x38(%rbp)
+                const long *s = (long *)memcpy_src;
+  40cff3:	48 8b 45 b8          	mov    -0x48(%rbp),%rax
+  40cff7:	48 89 45 d0          	mov    %rax,-0x30(%rbp)
+
+                for (memcpy_i=0; memcpy_i<memcpy_len/sizeof(long); memcpy_i++) 
+  40cffb:	48 c7 45 88 00 00 00 	movq   $0x0,-0x78(%rbp)
+  40d002:	00 
+  40d003:	eb 31                	jmp    40d036 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x3de>
+		{
+                        d[memcpy_i] = s[memcpy_i];
+  40d005:	48 8b 45 88          	mov    -0x78(%rbp),%rax
+  40d009:	48 8d 14 c5 00 00 00 	lea    0x0(,%rax,8),%rdx
+  40d010:	00 
+  40d011:	48 8b 45 c8          	mov    -0x38(%rbp),%rax
+  40d015:	48 01 c2             	add    %rax,%rdx
+  40d018:	48 8b 45 88          	mov    -0x78(%rbp),%rax
+  40d01c:	48 8d 0c c5 00 00 00 	lea    0x0(,%rax,8),%rcx
+  40d023:	00 
+  40d024:	48 8b 45 d0          	mov    -0x30(%rbp),%rax
+  40d028:	48 01 c8             	add    %rcx,%rax
+  40d02b:	48 8b 00             	mov    (%rax),%rax
+  40d02e:	48 89 02             	mov    %rax,(%rdx)
+	    {
+
+                long *d = (long *)memcpy_dst;
+                const long *s = (long *)memcpy_src;
+
+                for (memcpy_i=0; memcpy_i<memcpy_len/sizeof(long); memcpy_i++) 
+  40d031:	48 83 45 88 01       	addq   $0x1,-0x78(%rbp)
+  40d036:	48 8b 45 c0          	mov    -0x40(%rbp),%rax
+  40d03a:	48 c1 e8 03          	shr    $0x3,%rax
+  40d03e:	48 3b 45 88          	cmp    -0x78(%rbp),%rax
+  40d042:	77 c1                	ja     40d005 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x3ad>
+		{
+                        d[memcpy_i] = s[memcpy_i];
+                }
+  40d044:	eb 44                	jmp    40d08a <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x432>
+            }
+            else 
+            {
+                char *d = (char *)memcpy_dst;
+  40d046:	48 8b 45 b0          	mov    -0x50(%rbp),%rax
+  40d04a:	48 89 45 d8          	mov    %rax,-0x28(%rbp)
+                const char *s = (char *)memcpy_src;
+  40d04e:	48 8b 45 b8          	mov    -0x48(%rbp),%rax
+  40d052:	48 89 45 e0          	mov    %rax,-0x20(%rbp)
+
+                for (memcpy_i=0; memcpy_i<memcpy_len; memcpy_i++) 
+  40d056:	48 c7 45 88 00 00 00 	movq   $0x0,-0x78(%rbp)
+  40d05d:	00 
+  40d05e:	eb 20                	jmp    40d080 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x428>
+		{
+                        d[memcpy_i] = s[memcpy_i];
+  40d060:	48 8b 45 88          	mov    -0x78(%rbp),%rax
+  40d064:	48 8b 55 d8          	mov    -0x28(%rbp),%rdx
+  40d068:	48 01 c2             	add    %rax,%rdx
+  40d06b:	48 8b 45 88          	mov    -0x78(%rbp),%rax
+  40d06f:	48 8b 4d e0          	mov    -0x20(%rbp),%rcx
+  40d073:	48 01 c8             	add    %rcx,%rax
+  40d076:	0f b6 00             	movzbl (%rax),%eax
+  40d079:	88 02                	mov    %al,(%rdx)
+            else 
+            {
+                char *d = (char *)memcpy_dst;
+                const char *s = (char *)memcpy_src;
+
+                for (memcpy_i=0; memcpy_i<memcpy_len; memcpy_i++) 
+  40d07b:	48 83 45 88 01       	addq   $0x1,-0x78(%rbp)
+  40d080:	48 8b 45 88          	mov    -0x78(%rbp),%rax
+  40d084:	48 3b 45 c0          	cmp    -0x40(%rbp),%rax
+  40d088:	72 d6                	jb     40d060 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x408>
+                }
+            }
+
+
+
+           if( makeBorder )
+  40d08a:	80 bd 1f ff ff ff 00 	cmpb   $0x0,-0xe1(%rbp)
+  40d091:	0f 84 1d 02 00 00    	je     40d2b4 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x65c>
+            {
+                if( btab_esz*(int)sizeof(int) == esz ) //Sizof(int) Input to Kernel
+  40d097:	b8 04 00 00 00       	mov    $0x4,%eax
+  40d09c:	0f af 85 48 ff ff ff 	imul   -0xb8(%rbp),%eax
+  40d0a3:	3b 45 10             	cmp    0x10(%rbp),%eax
+  40d0a6:	0f 85 22 01 00 00    	jne    40d1ce <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x576>
+                {
+                    const int* isrc = (const int*)src;
+  40d0ac:	48 8b 85 00 ff ff ff 	mov    -0x100(%rbp),%rax
+  40d0b3:	48 89 45 e8          	mov    %rax,-0x18(%rbp)
+                    int* irow = (int*)row;
+  40d0b7:	48 8b 45 a8          	mov    -0x58(%rbp),%rax
+  40d0bb:	48 89 45 f0          	mov    %rax,-0x10(%rbp)
+
+                    for( i = 0; i < _dx1*btab_esz; i++ )
+  40d0bf:	c7 85 28 ff ff ff 00 	movl   $0x0,-0xd8(%rbp)
+  40d0c6:	00 00 00 
+  40d0c9:	eb 4c                	jmp    40d117 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x4bf>
+                        irow[i] = isrc[btab[i]];
+  40d0cb:	8b 85 28 ff ff ff    	mov    -0xd8(%rbp),%eax
+  40d0d1:	48 98                	cltq   
+  40d0d3:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40d0da:	00 
+  40d0db:	48 8b 45 f0          	mov    -0x10(%rbp),%rax
+  40d0df:	48 01 c2             	add    %rax,%rdx
+  40d0e2:	8b 85 28 ff ff ff    	mov    -0xd8(%rbp),%eax
+  40d0e8:	48 98                	cltq   
+  40d0ea:	48 8d 0c 85 00 00 00 	lea    0x0(,%rax,4),%rcx
+  40d0f1:	00 
+  40d0f2:	48 8b 45 60          	mov    0x60(%rbp),%rax
+  40d0f6:	48 01 c8             	add    %rcx,%rax
+  40d0f9:	8b 00                	mov    (%rax),%eax
+  40d0fb:	48 98                	cltq   
+  40d0fd:	48 8d 0c 85 00 00 00 	lea    0x0(,%rax,4),%rcx
+  40d104:	00 
+  40d105:	48 8b 45 e8          	mov    -0x18(%rbp),%rax
+  40d109:	48 01 c8             	add    %rcx,%rax
+  40d10c:	8b 00                	mov    (%rax),%eax
+  40d10e:	89 02                	mov    %eax,(%rdx)
+                if( btab_esz*(int)sizeof(int) == esz ) //Sizof(int) Input to Kernel
+                {
+                    const int* isrc = (const int*)src;
+                    int* irow = (int*)row;
+
+                    for( i = 0; i < _dx1*btab_esz; i++ )
+  40d110:	83 85 28 ff ff ff 01 	addl   $0x1,-0xd8(%rbp)
+  40d117:	8b 85 5c ff ff ff    	mov    -0xa4(%rbp),%eax
+  40d11d:	0f af 85 48 ff ff ff 	imul   -0xb8(%rbp),%eax
+  40d124:	3b 85 28 ff ff ff    	cmp    -0xd8(%rbp),%eax
+  40d12a:	7f 9f                	jg     40d0cb <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x473>
+                        irow[i] = isrc[btab[i]];
+                    for( i = 0; i < _dx2*btab_esz; i++ )
+  40d12c:	c7 85 28 ff ff ff 00 	movl   $0x0,-0xd8(%rbp)
+  40d133:	00 00 00 
+  40d136:	eb 78                	jmp    40d1b0 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x558>
+                        irow[i + (width1 - _dx2)*btab_esz] = isrc[btab[i+_dx1*btab_esz]];
+  40d138:	8b 85 60 ff ff ff    	mov    -0xa0(%rbp),%eax
+  40d13e:	8b 95 64 ff ff ff    	mov    -0x9c(%rbp),%edx
+  40d144:	29 c2                	sub    %eax,%edx
+  40d146:	89 d0                	mov    %edx,%eax
+  40d148:	0f af 85 48 ff ff ff 	imul   -0xb8(%rbp),%eax
+  40d14f:	89 c2                	mov    %eax,%edx
+  40d151:	8b 85 28 ff ff ff    	mov    -0xd8(%rbp),%eax
+  40d157:	01 d0                	add    %edx,%eax
+  40d159:	48 98                	cltq   
+  40d15b:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40d162:	00 
+  40d163:	48 8b 45 f0          	mov    -0x10(%rbp),%rax
+  40d167:	48 01 c2             	add    %rax,%rdx
+  40d16a:	8b 85 5c ff ff ff    	mov    -0xa4(%rbp),%eax
+  40d170:	0f af 85 48 ff ff ff 	imul   -0xb8(%rbp),%eax
+  40d177:	89 c1                	mov    %eax,%ecx
+  40d179:	8b 85 28 ff ff ff    	mov    -0xd8(%rbp),%eax
+  40d17f:	01 c8                	add    %ecx,%eax
+  40d181:	48 98                	cltq   
+  40d183:	48 8d 0c 85 00 00 00 	lea    0x0(,%rax,4),%rcx
+  40d18a:	00 
+  40d18b:	48 8b 45 60          	mov    0x60(%rbp),%rax
+  40d18f:	48 01 c8             	add    %rcx,%rax
+  40d192:	8b 00                	mov    (%rax),%eax
+  40d194:	48 98                	cltq   
+  40d196:	48 8d 0c 85 00 00 00 	lea    0x0(,%rax,4),%rcx
+  40d19d:	00 
+  40d19e:	48 8b 45 e8          	mov    -0x18(%rbp),%rax
+  40d1a2:	48 01 c8             	add    %rcx,%rax
+  40d1a5:	8b 00                	mov    (%rax),%eax
+  40d1a7:	89 02                	mov    %eax,(%rdx)
+                    const int* isrc = (const int*)src;
+                    int* irow = (int*)row;
+
+                    for( i = 0; i < _dx1*btab_esz; i++ )
+                        irow[i] = isrc[btab[i]];
+                    for( i = 0; i < _dx2*btab_esz; i++ )
+  40d1a9:	83 85 28 ff ff ff 01 	addl   $0x1,-0xd8(%rbp)
+  40d1b0:	8b 85 60 ff ff ff    	mov    -0xa0(%rbp),%eax
+  40d1b6:	0f af 85 48 ff ff ff 	imul   -0xb8(%rbp),%eax
+  40d1bd:	3b 85 28 ff ff ff    	cmp    -0xd8(%rbp),%eax
+  40d1c3:	0f 8f 6f ff ff ff    	jg     40d138 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x4e0>
+  40d1c9:	e9 e6 00 00 00       	jmpq   40d2b4 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x65c>
+                        irow[i + (width1 - _dx2)*btab_esz] = isrc[btab[i+_dx1*btab_esz]];
+                }
+                else
+                {
+                    for( i = 0; i < _dx1*esz; i++ )
+  40d1ce:	c7 85 28 ff ff ff 00 	movl   $0x0,-0xd8(%rbp)
+  40d1d5:	00 00 00 
+  40d1d8:	eb 42                	jmp    40d21c <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x5c4>
+                        row[i] = src[btab[i]];
+  40d1da:	8b 85 28 ff ff ff    	mov    -0xd8(%rbp),%eax
+  40d1e0:	48 63 d0             	movslq %eax,%rdx
+  40d1e3:	48 8b 45 a8          	mov    -0x58(%rbp),%rax
+  40d1e7:	48 01 c2             	add    %rax,%rdx
+  40d1ea:	8b 85 28 ff ff ff    	mov    -0xd8(%rbp),%eax
+  40d1f0:	48 98                	cltq   
+  40d1f2:	48 8d 0c 85 00 00 00 	lea    0x0(,%rax,4),%rcx
+  40d1f9:	00 
+  40d1fa:	48 8b 45 60          	mov    0x60(%rbp),%rax
+  40d1fe:	48 01 c8             	add    %rcx,%rax
+  40d201:	8b 00                	mov    (%rax),%eax
+  40d203:	48 63 c8             	movslq %eax,%rcx
+  40d206:	48 8b 85 00 ff ff ff 	mov    -0x100(%rbp),%rax
+  40d20d:	48 01 c8             	add    %rcx,%rax
+  40d210:	0f b6 00             	movzbl (%rax),%eax
+  40d213:	88 02                	mov    %al,(%rdx)
+                    for( i = 0; i < _dx2*btab_esz; i++ )
+                        irow[i + (width1 - _dx2)*btab_esz] = isrc[btab[i+_dx1*btab_esz]];
+                }
+                else
+                {
+                    for( i = 0; i < _dx1*esz; i++ )
+  40d215:	83 85 28 ff ff ff 01 	addl   $0x1,-0xd8(%rbp)
+  40d21c:	8b 85 5c ff ff ff    	mov    -0xa4(%rbp),%eax
+  40d222:	0f af 45 10          	imul   0x10(%rbp),%eax
+  40d226:	3b 85 28 ff ff ff    	cmp    -0xd8(%rbp),%eax
+  40d22c:	7f ac                	jg     40d1da <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x582>
+                        row[i] = src[btab[i]];
+                    for( i = 0; i < _dx2*esz; i++ )
+  40d22e:	c7 85 28 ff ff ff 00 	movl   $0x0,-0xd8(%rbp)
+  40d235:	00 00 00 
+  40d238:	eb 68                	jmp    40d2a2 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x64a>
+                        row[i + (width1 - _dx2)*esz] = src[btab[i+_dx1*esz]];
+  40d23a:	8b 85 60 ff ff ff    	mov    -0xa0(%rbp),%eax
+  40d240:	8b 95 64 ff ff ff    	mov    -0x9c(%rbp),%edx
+  40d246:	29 c2                	sub    %eax,%edx
+  40d248:	89 d0                	mov    %edx,%eax
+  40d24a:	0f af 45 10          	imul   0x10(%rbp),%eax
+  40d24e:	89 c2                	mov    %eax,%edx
+  40d250:	8b 85 28 ff ff ff    	mov    -0xd8(%rbp),%eax
+  40d256:	01 d0                	add    %edx,%eax
+  40d258:	48 63 d0             	movslq %eax,%rdx
+  40d25b:	48 8b 45 a8          	mov    -0x58(%rbp),%rax
+  40d25f:	48 01 c2             	add    %rax,%rdx
+  40d262:	8b 85 5c ff ff ff    	mov    -0xa4(%rbp),%eax
+  40d268:	0f af 45 10          	imul   0x10(%rbp),%eax
+  40d26c:	89 c1                	mov    %eax,%ecx
+  40d26e:	8b 85 28 ff ff ff    	mov    -0xd8(%rbp),%eax
+  40d274:	01 c8                	add    %ecx,%eax
+  40d276:	48 98                	cltq   
+  40d278:	48 8d 0c 85 00 00 00 	lea    0x0(,%rax,4),%rcx
+  40d27f:	00 
+  40d280:	48 8b 45 60          	mov    0x60(%rbp),%rax
+  40d284:	48 01 c8             	add    %rcx,%rax
+  40d287:	8b 00                	mov    (%rax),%eax
+  40d289:	48 63 c8             	movslq %eax,%rcx
+  40d28c:	48 8b 85 00 ff ff ff 	mov    -0x100(%rbp),%rax
+  40d293:	48 01 c8             	add    %rcx,%rax
+  40d296:	0f b6 00             	movzbl (%rax),%eax
+  40d299:	88 02                	mov    %al,(%rdx)
+                }
+                else
+                {
+                    for( i = 0; i < _dx1*esz; i++ )
+                        row[i] = src[btab[i]];
+                    for( i = 0; i < _dx2*esz; i++ )
+  40d29b:	83 85 28 ff ff ff 01 	addl   $0x1,-0xd8(%rbp)
+  40d2a2:	8b 85 60 ff ff ff    	mov    -0xa0(%rbp),%eax
+  40d2a8:	0f af 45 10          	imul   0x10(%rbp),%eax
+  40d2ac:	3b 85 28 ff ff ff    	cmp    -0xd8(%rbp),%eax
+  40d2b2:	7f 86                	jg     40d23a <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x5e2>
+	if (dcount < count)
+		dcount  = count;
+
+        //dcount = std::min(dcount, count);
+        count -= dcount;
+        for( ; dcount-- > 0; src += srcstep )
+  40d2b4:	8b 85 fc fe ff ff    	mov    -0x104(%rbp),%eax
+  40d2ba:	48 98                	cltq   
+  40d2bc:	48 01 85 00 ff ff ff 	add    %rax,-0x100(%rbp)
+  40d2c3:	8b 85 2c ff ff ff    	mov    -0xd4(%rbp),%eax
+  40d2c9:	8d 50 ff             	lea    -0x1(%rax),%edx
+  40d2cc:	89 95 2c ff ff ff    	mov    %edx,-0xd4(%rbp)
+  40d2d2:	85 c0                	test   %eax,%eax
+  40d2d4:	0f 9f c0             	setg   %al
+  40d2d7:	84 c0                	test   %al,%al
+  40d2d9:	0f 85 d1 fb ff ff    	jne    40ceb0 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x258>
+            //    (*rowFilter)(row, brow, width, CV_MAT_CN(srcType));
+        }
+	
+        //int max_i = std::min(bufRows, roi.height - (dstY + dy) + (kheight - 1));	
+	int max_i;
+	if (bufRows <=  roi.height - (dstY + dy) + (kheight - 1))
+  40d2df:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40d2e6:	8b 50 3c             	mov    0x3c(%rax),%edx
+  40d2e9:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40d2f0:	8b 88 e4 00 00 00    	mov    0xe4(%rax),%ecx
+  40d2f6:	8b 85 24 ff ff ff    	mov    -0xdc(%rbp),%eax
+  40d2fc:	01 c8                	add    %ecx,%eax
+  40d2fe:	29 c2                	sub    %eax,%edx
+  40d300:	8b 85 54 ff ff ff    	mov    -0xac(%rbp),%eax
+  40d306:	83 e8 01             	sub    $0x1,%eax
+  40d309:	01 d0                	add    %edx,%eax
+  40d30b:	3b 45 18             	cmp    0x18(%rbp),%eax
+  40d30e:	7c 0b                	jl     40d31b <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x6c3>
+		max_i = bufRows;	
+  40d310:	8b 45 18             	mov    0x18(%rbp),%eax
+  40d313:	89 85 30 ff ff ff    	mov    %eax,-0xd0(%rbp)
+  40d319:	eb 32                	jmp    40d34d <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x6f5>
+	else
+		max_i =  roi.height - (dstY + dy) + (kheight - 1);
+  40d31b:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40d322:	8b 50 3c             	mov    0x3c(%rax),%edx
+  40d325:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40d32c:	8b 88 e4 00 00 00    	mov    0xe4(%rax),%ecx
+  40d332:	8b 85 24 ff ff ff    	mov    -0xdc(%rbp),%eax
+  40d338:	01 c8                	add    %ecx,%eax
+  40d33a:	29 c2                	sub    %eax,%edx
+  40d33c:	8b 85 54 ff ff ff    	mov    -0xac(%rbp),%eax
+  40d342:	83 e8 01             	sub    $0x1,%eax
+  40d345:	01 d0                	add    %edx,%eax
+  40d347:	89 85 30 ff ff ff    	mov    %eax,-0xd0(%rbp)
+
+        for( i = 0; i < max_i; i++ )
+  40d34d:	c7 85 28 ff ff ff 00 	movl   $0x0,-0xd8(%rbp)
+  40d354:	00 00 00 
+  40d357:	e9 6a 02 00 00       	jmpq   40d5c6 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x96e>
+        {
+          //  int srcY = borderInterpolate(dstY + dy + i + roi.y - ay,
+        //                    wholeSize.height, columnBorderType);
+	    int p =  dstY + dy + i + roi.y - ay;
+  40d35c:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40d363:	8b 90 e4 00 00 00    	mov    0xe4(%rax),%edx
+  40d369:	8b 85 24 ff ff ff    	mov    -0xdc(%rbp),%eax
+  40d36f:	01 c2                	add    %eax,%edx
+  40d371:	8b 85 28 ff ff ff    	mov    -0xd8(%rbp),%eax
+  40d377:	01 c2                	add    %eax,%edx
+  40d379:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40d380:	8b 40 34             	mov    0x34(%rax),%eax
+  40d383:	01 d0                	add    %edx,%eax
+  40d385:	2b 85 58 ff ff ff    	sub    -0xa8(%rbp),%eax
+  40d38b:	89 85 34 ff ff ff    	mov    %eax,-0xcc(%rbp)
+	    int len = wholeSize.height;
+  40d391:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40d398:	8b 40 2c             	mov    0x2c(%rax),%eax
+  40d39b:	89 85 6c ff ff ff    	mov    %eax,-0x94(%rbp)
+	    int borderType = columnBorderType;
+  40d3a1:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40d3a8:	8b 40 4c             	mov    0x4c(%rax),%eax
+  40d3ab:	89 85 70 ff ff ff    	mov    %eax,-0x90(%rbp)
+
+
+    	    if( (unsigned)p < (unsigned)len )
+  40d3b1:	8b 95 34 ff ff ff    	mov    -0xcc(%rbp),%edx
+  40d3b7:	8b 85 6c ff ff ff    	mov    -0x94(%rbp),%eax
+  40d3bd:	39 c2                	cmp    %eax,%edx
+  40d3bf:	0f 82 34 01 00 00    	jb     40d4f9 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x8a1>
+    	        ;
+    	    else if( borderType == BORDER_REPLICATE )
+  40d3c5:	83 bd 70 ff ff ff 01 	cmpl   $0x1,-0x90(%rbp)
+  40d3cc:	75 24                	jne    40d3f2 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x79a>
+    	        p = p < 0 ? 0 : len - 1;
+  40d3ce:	83 bd 34 ff ff ff 00 	cmpl   $0x0,-0xcc(%rbp)
+  40d3d5:	78 0b                	js     40d3e2 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x78a>
+  40d3d7:	8b 85 6c ff ff ff    	mov    -0x94(%rbp),%eax
+  40d3dd:	83 e8 01             	sub    $0x1,%eax
+  40d3e0:	eb 05                	jmp    40d3e7 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x78f>
+  40d3e2:	b8 00 00 00 00       	mov    $0x0,%eax
+  40d3e7:	89 85 34 ff ff ff    	mov    %eax,-0xcc(%rbp)
+  40d3ed:	e9 07 01 00 00       	jmpq   40d4f9 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x8a1>
+    	    else if( borderType == BORDER_REFLECT || borderType == BORDER_REFLECT_101 )
+  40d3f2:	83 bd 70 ff ff ff 02 	cmpl   $0x2,-0x90(%rbp)
+  40d3f9:	74 0d                	je     40d408 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x7b0>
+  40d3fb:	83 bd 70 ff ff ff 04 	cmpl   $0x4,-0x90(%rbp)
+  40d402:	0f 85 82 00 00 00    	jne    40d48a <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x832>
+    	    {
+    	        int delta = borderType == BORDER_REFLECT_101;
+  40d408:	83 bd 70 ff ff ff 04 	cmpl   $0x4,-0x90(%rbp)
+  40d40f:	0f 94 c0             	sete   %al
+  40d412:	0f b6 c0             	movzbl %al,%eax
+  40d415:	89 85 74 ff ff ff    	mov    %eax,-0x8c(%rbp)
+    	        if( len == 1 )
+  40d41b:	83 bd 6c ff ff ff 01 	cmpl   $0x1,-0x94(%rbp)
+  40d422:	75 0a                	jne    40d42e <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x7d6>
+    	            return 0;
+  40d424:	b8 00 00 00 00       	mov    $0x0,%eax
+  40d429:	e9 3f 04 00 00       	jmpq   40d86d <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0xc15>
+    	        do
+    	        {
+    	            if( p < 0 )
+  40d42e:	83 bd 34 ff ff ff 00 	cmpl   $0x0,-0xcc(%rbp)
+  40d435:	79 1a                	jns    40d451 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x7f9>
+    	                p = -p - 1 + delta;
+  40d437:	8b 85 34 ff ff ff    	mov    -0xcc(%rbp),%eax
+  40d43d:	f7 d0                	not    %eax
+  40d43f:	89 c2                	mov    %eax,%edx
+  40d441:	8b 85 74 ff ff ff    	mov    -0x8c(%rbp),%eax
+  40d447:	01 d0                	add    %edx,%eax
+  40d449:	89 85 34 ff ff ff    	mov    %eax,-0xcc(%rbp)
+  40d44f:	eb 27                	jmp    40d478 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x820>
+    	            else
+    	                p = len - 1 - (p - len) - delta;
+  40d451:	8b 85 6c ff ff ff    	mov    -0x94(%rbp),%eax
+  40d457:	8d 48 ff             	lea    -0x1(%rax),%ecx
+  40d45a:	8b 85 34 ff ff ff    	mov    -0xcc(%rbp),%eax
+  40d460:	8b 95 6c ff ff ff    	mov    -0x94(%rbp),%edx
+  40d466:	29 c2                	sub    %eax,%edx
+  40d468:	89 d0                	mov    %edx,%eax
+  40d46a:	01 c8                	add    %ecx,%eax
+  40d46c:	2b 85 74 ff ff ff    	sub    -0x8c(%rbp),%eax
+  40d472:	89 85 34 ff ff ff    	mov    %eax,-0xcc(%rbp)
+    	        }
+    	        while( (unsigned)p >= (unsigned)len );
+  40d478:	8b 95 34 ff ff ff    	mov    -0xcc(%rbp),%edx
+  40d47e:	8b 85 6c ff ff ff    	mov    -0x94(%rbp),%eax
+    	    else if( borderType == BORDER_REFLECT || borderType == BORDER_REFLECT_101 )
+    	    {
+    	        int delta = borderType == BORDER_REFLECT_101;
+    	        if( len == 1 )
+    	            return 0;
+    	        do
+  40d484:	39 c2                	cmp    %eax,%edx
+  40d486:	73 a6                	jae    40d42e <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x7d6>
+    	            if( p < 0 )
+    	                p = -p - 1 + delta;
+    	            else
+    	                p = len - 1 - (p - len) - delta;
+    	        }
+    	        while( (unsigned)p >= (unsigned)len );
+  40d488:	eb 6f                	jmp    40d4f9 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x8a1>
+    	    }
+    	    else if( borderType == BORDER_WRAP )
+  40d48a:	83 bd 70 ff ff ff 03 	cmpl   $0x3,-0x90(%rbp)
+  40d491:	75 53                	jne    40d4e6 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x88e>
+    	    {
+    	        if( p < 0 )
+  40d493:	83 bd 34 ff ff ff 00 	cmpl   $0x0,-0xcc(%rbp)
+  40d49a:	79 27                	jns    40d4c3 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x86b>
+    	            p -= ((p-len+1)/len)*len;
+  40d49c:	8b 85 6c ff ff ff    	mov    -0x94(%rbp),%eax
+  40d4a2:	8b 95 34 ff ff ff    	mov    -0xcc(%rbp),%edx
+  40d4a8:	29 c2                	sub    %eax,%edx
+  40d4aa:	89 d0                	mov    %edx,%eax
+  40d4ac:	83 c0 01             	add    $0x1,%eax
+  40d4af:	99                   	cltd   
+  40d4b0:	f7 bd 6c ff ff ff    	idivl  -0x94(%rbp)
+  40d4b6:	0f af 85 6c ff ff ff 	imul   -0x94(%rbp),%eax
+  40d4bd:	29 85 34 ff ff ff    	sub    %eax,-0xcc(%rbp)
+    	        if( p >= len )
+  40d4c3:	8b 85 34 ff ff ff    	mov    -0xcc(%rbp),%eax
+  40d4c9:	3b 85 6c ff ff ff    	cmp    -0x94(%rbp),%eax
+  40d4cf:	7c 28                	jl     40d4f9 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x8a1>
+    	            p %= len;
+  40d4d1:	8b 85 34 ff ff ff    	mov    -0xcc(%rbp),%eax
+  40d4d7:	99                   	cltd   
+  40d4d8:	f7 bd 6c ff ff ff    	idivl  -0x94(%rbp)
+  40d4de:	89 95 34 ff ff ff    	mov    %edx,-0xcc(%rbp)
+  40d4e4:	eb 13                	jmp    40d4f9 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x8a1>
+    	    }
+    	    else if( borderType == BORDER_CONSTANT )
+  40d4e6:	83 bd 70 ff ff ff 00 	cmpl   $0x0,-0x90(%rbp)
+  40d4ed:	75 0a                	jne    40d4f9 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x8a1>
+    	        p = -1;
+  40d4ef:	c7 85 34 ff ff ff ff 	movl   $0xffffffff,-0xcc(%rbp)
+  40d4f6:	ff ff ff 
+    	    else
+		;
+    	        //CV_Error( CV_StsBadArg, "Unknown/unsupported border type" );
+	
+	    int srcY = p;
+  40d4f9:	8b 85 34 ff ff ff    	mov    -0xcc(%rbp),%eax
+  40d4ff:	89 85 78 ff ff ff    	mov    %eax,-0x88(%rbp)
+
+
+
+            if( srcY < 0 ) // can happen only with constant border type
+  40d505:	83 bd 78 ff ff ff 00 	cmpl   $0x0,-0x88(%rbp)
+  40d50c:	79 2b                	jns    40d539 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x8e1>
+                //brows[i] = alignPtr(&constBorderRow[0], VEC_ALIGN);
+                brows[i] = (uchar *) ( ((long int)constBorderRow_s + VEC_ALIGN - 1) & ~(long int)(VEC_ALIGN-1) ) ;
+  40d50e:	8b 85 28 ff ff ff    	mov    -0xd8(%rbp),%eax
+  40d514:	48 98                	cltq   
+  40d516:	48 8d 14 c5 00 00 00 	lea    0x0(,%rax,8),%rdx
+  40d51d:	00 
+  40d51e:	48 8b 45 48          	mov    0x48(%rbp),%rax
+  40d522:	48 01 c2             	add    %rax,%rdx
+  40d525:	48 8b 45 58          	mov    0x58(%rbp),%rax
+  40d529:	48 83 c0 0f          	add    $0xf,%rax
+  40d52d:	48 83 e0 f0          	and    $0xfffffffffffffff0,%rax
+  40d531:	48 89 02             	mov    %rax,(%rdx)
+  40d534:	e9 86 00 00 00       	jmpq   40d5bf <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x967>
+            else
+            {
+	        //printf("%d %d \n",srcY,startY);
+                //CV_Assert( srcY >= startY );
+                if( srcY >= startY + rowCount )
+  40d539:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40d540:	8b 90 d4 00 00 00    	mov    0xd4(%rax),%edx
+  40d546:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40d54d:	8b 80 e0 00 00 00    	mov    0xe0(%rax),%eax
+  40d553:	01 d0                	add    %edx,%eax
+  40d555:	3b 85 78 ff ff ff    	cmp    -0x88(%rbp),%eax
+  40d55b:	7f 02                	jg     40d55f <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x907>
+                    break;
+  40d55d:	eb 79                	jmp    40d5d8 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x980>
+                int bi = (srcY - startY0) % bufRows;
+  40d55f:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40d566:	8b 80 d8 00 00 00    	mov    0xd8(%rax),%eax
+  40d56c:	8b 95 78 ff ff ff    	mov    -0x88(%rbp),%edx
+  40d572:	29 c2                	sub    %eax,%edx
+  40d574:	89 d0                	mov    %edx,%eax
+  40d576:	99                   	cltd   
+  40d577:	f7 7d 18             	idivl  0x18(%rbp)
+  40d57a:	89 95 7c ff ff ff    	mov    %edx,-0x84(%rbp)
+                brows[i] = (uchar *) ( ((long int)ringbuf_s + VEC_ALIGN - 1) & ~(long int)(VEC_ALIGN-1) ) + bi*bufStep    ;
+  40d580:	8b 85 28 ff ff ff    	mov    -0xd8(%rbp),%eax
+  40d586:	48 98                	cltq   
+  40d588:	48 8d 14 c5 00 00 00 	lea    0x0(,%rax,8),%rdx
+  40d58f:	00 
+  40d590:	48 8b 45 48          	mov    0x48(%rbp),%rax
+  40d594:	48 01 c2             	add    %rax,%rdx
+  40d597:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40d59e:	8b 80 d0 00 00 00    	mov    0xd0(%rax),%eax
+  40d5a4:	0f af 85 7c ff ff ff 	imul   -0x84(%rbp),%eax
+  40d5ab:	48 98                	cltq   
+  40d5ad:	48 8b 4d 50          	mov    0x50(%rbp),%rcx
+  40d5b1:	48 83 c1 0f          	add    $0xf,%rcx
+  40d5b5:	48 83 e1 f0          	and    $0xfffffffffffffff0,%rcx
+  40d5b9:	48 01 c8             	add    %rcx,%rax
+  40d5bc:	48 89 02             	mov    %rax,(%rdx)
+	if (bufRows <=  roi.height - (dstY + dy) + (kheight - 1))
+		max_i = bufRows;	
+	else
+		max_i =  roi.height - (dstY + dy) + (kheight - 1);
+
+        for( i = 0; i < max_i; i++ )
+  40d5bf:	83 85 28 ff ff ff 01 	addl   $0x1,-0xd8(%rbp)
+  40d5c6:	8b 85 28 ff ff ff    	mov    -0xd8(%rbp),%eax
+  40d5cc:	3b 85 30 ff ff ff    	cmp    -0xd0(%rbp),%eax
+  40d5d2:	0f 8c 84 fd ff ff    	jl     40d35c <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x704>
+                    break;
+                int bi = (srcY - startY0) % bufRows;
+                brows[i] = (uchar *) ( ((long int)ringbuf_s + VEC_ALIGN - 1) & ~(long int)(VEC_ALIGN-1) ) + bi*bufStep    ;
+            }
+        }
+        if( i < kheight )
+  40d5d8:	8b 85 28 ff ff ff    	mov    -0xd8(%rbp),%eax
+  40d5de:	3b 85 54 ff ff ff    	cmp    -0xac(%rbp),%eax
+  40d5e4:	7d 2e                	jge    40d614 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x9bc>
+            break;
+  40d5e6:	90                   	nop
+	        }
+	    }
+	    //(*filter2D)((const uchar**)brows, dst, dststep, i, roi.width, cn);
+    }
+
+    dstY += dy;
+  40d5e7:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40d5ee:	8b 90 e4 00 00 00    	mov    0xe4(%rax),%edx
+  40d5f4:	8b 85 24 ff ff ff    	mov    -0xdc(%rbp),%eax
+  40d5fa:	01 c2                	add    %eax,%edx
+  40d5fc:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40d603:	89 90 e4 00 00 00    	mov    %edx,0xe4(%rax)
+    //CV_Assert( dstY <= roi.height );
+    return dy;
+  40d609:	8b 85 24 ff ff ff    	mov    -0xdc(%rbp),%eax
+  40d60f:	e9 59 02 00 00       	jmpq   40d86d <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0xc15>
+                brows[i] = (uchar *) ( ((long int)ringbuf_s + VEC_ALIGN - 1) & ~(long int)(VEC_ALIGN-1) ) + bi*bufStep    ;
+            }
+        }
+        if( i < kheight )
+            break;
+        i -= kheight - 1;
+  40d614:	b8 01 00 00 00       	mov    $0x1,%eax
+  40d619:	2b 85 54 ff ff ff    	sub    -0xac(%rbp),%eax
+  40d61f:	01 85 28 ff ff ff    	add    %eax,-0xd8(%rbp)
+	    uchar** src_ko = (uchar**)brows;
+  40d625:	48 8b 45 48          	mov    0x48(%rbp),%rax
+  40d629:	48 89 45 90          	mov    %rax,-0x70(%rbp)
+	    uchar* dst_ko = dst;
+  40d62d:	48 8b 85 f0 fe ff ff 	mov    -0x110(%rbp),%rax
+  40d634:	48 89 45 98          	mov    %rax,-0x68(%rbp)
+	        //const float* kf = (const float*)&(filter2D->coeffs[0]); //Input to kernel
+	        //const uchar** kp = (const uchar**)&(filter2D->ptrs[0]); //Input to kernel 
+	        int i_ko, k_ko;
+	       // int nz = (int)((filter2D->coords).size());
+	    
+	        int width_ko = roi.width;
+  40d638:	48 8b 85 08 ff ff ff 	mov    -0xf8(%rbp),%rax
+  40d63f:	8b 40 38             	mov    0x38(%rax),%eax
+  40d642:	89 45 80             	mov    %eax,-0x80(%rbp)
+		width_ko *= cn;
+  40d645:	8b 45 80             	mov    -0x80(%rbp),%eax
+  40d648:	0f af 45 20          	imul   0x20(%rbp),%eax
+  40d64c:	89 45 80             	mov    %eax,-0x80(%rbp)
+		
+	        for(int count_ko=i ; count_ko > 0; count_ko--, dst_ko += dststep, src_ko++ )
+  40d64f:	8b 85 28 ff ff ff    	mov    -0xd8(%rbp),%eax
+  40d655:	89 85 40 ff ff ff    	mov    %eax,-0xc0(%rbp)
+  40d65b:	e9 d9 01 00 00       	jmpq   40d839 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0xbe1>
+	        //for( ; i > 0; i--, dst += dststep, src_ko++ )
+	        {
+	            //DT* D = (DT*)dst;
+	            uchar* D = (uchar*)dst_ko;
+  40d660:	48 8b 45 98          	mov    -0x68(%rbp),%rax
+  40d664:	48 89 45 f8          	mov    %rax,-0x8(%rbp)
+	    
+	            for( k_ko = 0; k_ko < nz; k_ko++ )
+  40d668:	c7 85 3c ff ff ff 00 	movl   $0x0,-0xc4(%rbp)
+  40d66f:	00 00 00 
+  40d672:	eb 71                	jmp    40d6e5 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0xa8d>
+	                kp[k_ko] = (const uchar*)src_ko[pt[k_ko].y] + pt[k_ko].x*cn;
+  40d674:	8b 85 3c ff ff ff    	mov    -0xc4(%rbp),%eax
+  40d67a:	48 98                	cltq   
+  40d67c:	48 8d 14 c5 00 00 00 	lea    0x0(,%rax,8),%rdx
+  40d683:	00 
+  40d684:	48 8b 45 30          	mov    0x30(%rbp),%rax
+  40d688:	48 01 c2             	add    %rax,%rdx
+  40d68b:	8b 85 3c ff ff ff    	mov    -0xc4(%rbp),%eax
+  40d691:	48 98                	cltq   
+  40d693:	48 8d 0c c5 00 00 00 	lea    0x0(,%rax,8),%rcx
+  40d69a:	00 
+  40d69b:	48 8b 45 40          	mov    0x40(%rbp),%rax
+  40d69f:	48 01 c8             	add    %rcx,%rax
+  40d6a2:	8b 40 04             	mov    0x4(%rax),%eax
+  40d6a5:	48 98                	cltq   
+  40d6a7:	48 8d 0c c5 00 00 00 	lea    0x0(,%rax,8),%rcx
+  40d6ae:	00 
+  40d6af:	48 8b 45 90          	mov    -0x70(%rbp),%rax
+  40d6b3:	48 01 c8             	add    %rcx,%rax
+  40d6b6:	48 8b 08             	mov    (%rax),%rcx
+  40d6b9:	8b 85 3c ff ff ff    	mov    -0xc4(%rbp),%eax
+  40d6bf:	48 98                	cltq   
+  40d6c1:	48 8d 34 c5 00 00 00 	lea    0x0(,%rax,8),%rsi
+  40d6c8:	00 
+  40d6c9:	48 8b 45 40          	mov    0x40(%rbp),%rax
+  40d6cd:	48 01 f0             	add    %rsi,%rax
+  40d6d0:	8b 00                	mov    (%rax),%eax
+  40d6d2:	0f af 45 20          	imul   0x20(%rbp),%eax
+  40d6d6:	48 98                	cltq   
+  40d6d8:	48 01 c8             	add    %rcx,%rax
+  40d6db:	48 89 02             	mov    %rax,(%rdx)
+	        //for( ; i > 0; i--, dst += dststep, src_ko++ )
+	        {
+	            //DT* D = (DT*)dst;
+	            uchar* D = (uchar*)dst_ko;
+	    
+	            for( k_ko = 0; k_ko < nz; k_ko++ )
+  40d6de:	83 85 3c ff ff ff 01 	addl   $0x1,-0xc4(%rbp)
+  40d6e5:	8b 85 3c ff ff ff    	mov    -0xc4(%rbp),%eax
+  40d6eb:	3b 45 38             	cmp    0x38(%rbp),%eax
+  40d6ee:	7c 84                	jl     40d674 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0xa1c>
+	                kp[k_ko] = (const uchar*)src_ko[pt[k_ko].y] + pt[k_ko].x*cn;
+	    
+	            i_ko = 0;
+  40d6f0:	c7 85 38 ff ff ff 00 	movl   $0x0,-0xc8(%rbp)
+  40d6f7:	00 00 00 
+	            for( ; i_ko < width_ko; i_ko++ )
+  40d6fa:	e9 13 01 00 00       	jmpq   40d812 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0xbba>
+	            {
+	                float s0 = _delta;
+  40d6ff:	8b 85 e8 fe ff ff    	mov    -0x118(%rbp),%eax
+  40d705:	89 85 44 ff ff ff    	mov    %eax,-0xbc(%rbp)
+	                for( k_ko = 0; k_ko < nz; k_ko++ )
+  40d70b:	c7 85 3c ff ff ff 00 	movl   $0x0,-0xc4(%rbp)
+  40d712:	00 00 00 
+  40d715:	eb 69                	jmp    40d780 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0xb28>
+	                    s0 += kf[k_ko]*kp[k_ko][i_ko];
+  40d717:	8b 85 3c ff ff ff    	mov    -0xc4(%rbp),%eax
+  40d71d:	48 98                	cltq   
+  40d71f:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40d726:	00 
+  40d727:	48 8b 45 28          	mov    0x28(%rbp),%rax
+  40d72b:	48 01 d0             	add    %rdx,%rax
+  40d72e:	f3 0f 10 08          	movss  (%rax),%xmm1
+  40d732:	8b 85 3c ff ff ff    	mov    -0xc4(%rbp),%eax
+  40d738:	48 98                	cltq   
+  40d73a:	48 8d 14 c5 00 00 00 	lea    0x0(,%rax,8),%rdx
+  40d741:	00 
+  40d742:	48 8b 45 30          	mov    0x30(%rbp),%rax
+  40d746:	48 01 d0             	add    %rdx,%rax
+  40d749:	48 8b 10             	mov    (%rax),%rdx
+  40d74c:	8b 85 38 ff ff ff    	mov    -0xc8(%rbp),%eax
+  40d752:	48 98                	cltq   
+  40d754:	48 01 d0             	add    %rdx,%rax
+  40d757:	0f b6 00             	movzbl (%rax),%eax
+  40d75a:	0f b6 c0             	movzbl %al,%eax
+  40d75d:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40d761:	f3 0f 59 c1          	mulss  %xmm1,%xmm0
+  40d765:	f3 0f 10 8d 44 ff ff 	movss  -0xbc(%rbp),%xmm1
+  40d76c:	ff 
+  40d76d:	f3 0f 58 c1          	addss  %xmm1,%xmm0
+  40d771:	f3 0f 11 85 44 ff ff 	movss  %xmm0,-0xbc(%rbp)
+  40d778:	ff 
+	    
+	            i_ko = 0;
+	            for( ; i_ko < width_ko; i_ko++ )
+	            {
+	                float s0 = _delta;
+	                for( k_ko = 0; k_ko < nz; k_ko++ )
+  40d779:	83 85 3c ff ff ff 01 	addl   $0x1,-0xc4(%rbp)
+  40d780:	8b 85 3c ff ff ff    	mov    -0xc4(%rbp),%eax
+  40d786:	3b 45 38             	cmp    0x38(%rbp),%eax
+  40d789:	7c 8c                	jl     40d717 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0xabf>
+	                    s0 += kf[k_ko]*kp[k_ko][i_ko];
+	    	    	int i_s0 = My_Round(s0);
+  40d78b:	f3 0f 10 85 44 ff ff 	movss  -0xbc(%rbp),%xmm0
+  40d792:	ff 
+  40d793:	0f 5a c0             	cvtps2pd %xmm0,%xmm0
+  40d796:	f3 0f 10 8d 44 ff ff 	movss  -0xbc(%rbp),%xmm1
+  40d79d:	ff 
+  40d79e:	f3 0f 2c c1          	cvttss2si %xmm1,%eax
+  40d7a2:	f2 0f 2a c8          	cvtsi2sd %eax,%xmm1
+  40d7a6:	f2 0f 10 15 7a 23 4e 	movsd  0x4e237a(%rip),%xmm2        # 8efb28 <_ZZNK4ORB211my_operatorERKN2cv11_InputArrayES3_RSt6vectorINS0_8KeyPointESaIS5_EERKNS0_12_OutputArrayEbE8__func__+0x15>
+  40d7ad:	00 
+  40d7ae:	f2 0f 58 ca          	addsd  %xmm2,%xmm1
+  40d7b2:	66 0f 2e c1          	ucomisd %xmm1,%xmm0
+  40d7b6:	72 11                	jb     40d7c9 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0xb71>
+  40d7b8:	f3 0f 10 85 44 ff ff 	movss  -0xbc(%rbp),%xmm0
+  40d7bf:	ff 
+  40d7c0:	f3 0f 2c c0          	cvttss2si %xmm0,%eax
+  40d7c4:	83 c0 01             	add    $0x1,%eax
+  40d7c7:	eb 0c                	jmp    40d7d5 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0xb7d>
+  40d7c9:	f3 0f 10 85 44 ff ff 	movss  -0xbc(%rbp),%xmm0
+  40d7d0:	ff 
+  40d7d1:	f3 0f 2c c0          	cvttss2si %xmm0,%eax
+  40d7d5:	89 45 84             	mov    %eax,-0x7c(%rbp)
+	                D[i_ko] = (uchar)((unsigned)i_s0 <= UCHAR_MAX ? i_s0 : i_s0 > 0 ? UCHAR_MAX : 0);
+  40d7d8:	8b 85 38 ff ff ff    	mov    -0xc8(%rbp),%eax
+  40d7de:	48 63 d0             	movslq %eax,%rdx
+  40d7e1:	48 8b 45 f8          	mov    -0x8(%rbp),%rax
+  40d7e5:	48 01 c2             	add    %rax,%rdx
+  40d7e8:	8b 45 84             	mov    -0x7c(%rbp),%eax
+  40d7eb:	3d ff 00 00 00       	cmp    $0xff,%eax
+  40d7f0:	76 14                	jbe    40d806 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0xbae>
+  40d7f2:	83 7d 84 00          	cmpl   $0x0,-0x7c(%rbp)
+  40d7f6:	7e 07                	jle    40d7ff <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0xba7>
+  40d7f8:	b8 ff ff ff ff       	mov    $0xffffffff,%eax
+  40d7fd:	eb 0a                	jmp    40d809 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0xbb1>
+  40d7ff:	b8 00 00 00 00       	mov    $0x0,%eax
+  40d804:	eb 03                	jmp    40d809 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0xbb1>
+  40d806:	8b 45 84             	mov    -0x7c(%rbp),%eax
+  40d809:	88 02                	mov    %al,(%rdx)
+	    
+	            for( k_ko = 0; k_ko < nz; k_ko++ )
+	                kp[k_ko] = (const uchar*)src_ko[pt[k_ko].y] + pt[k_ko].x*cn;
+	    
+	            i_ko = 0;
+	            for( ; i_ko < width_ko; i_ko++ )
+  40d80b:	83 85 38 ff ff ff 01 	addl   $0x1,-0xc8(%rbp)
+  40d812:	8b 85 38 ff ff ff    	mov    -0xc8(%rbp),%eax
+  40d818:	3b 45 80             	cmp    -0x80(%rbp),%eax
+  40d81b:	0f 8c de fe ff ff    	jl     40d6ff <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0xaa7>
+	       // int nz = (int)((filter2D->coords).size());
+	    
+	        int width_ko = roi.width;
+		width_ko *= cn;
+		
+	        for(int count_ko=i ; count_ko > 0; count_ko--, dst_ko += dststep, src_ko++ )
+  40d821:	83 ad 40 ff ff ff 01 	subl   $0x1,-0xc0(%rbp)
+  40d828:	8b 85 ec fe ff ff    	mov    -0x114(%rbp),%eax
+  40d82e:	48 98                	cltq   
+  40d830:	48 01 45 98          	add    %rax,-0x68(%rbp)
+  40d834:	48 83 45 90 08       	addq   $0x8,-0x70(%rbp)
+  40d839:	83 bd 40 ff ff ff 00 	cmpl   $0x0,-0xc0(%rbp)
+  40d840:	0f 8f 1a fe ff ff    	jg     40d660 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0xa08>
+	count =  endY - startY - rowCount;
+ 
+
+    //CV_Assert( src && dst && count > 0 );
+
+    for(;; dst += dststep*i, dy += i)
+  40d846:	8b 85 ec fe ff ff    	mov    -0x114(%rbp),%eax
+  40d84c:	0f af 85 28 ff ff ff 	imul   -0xd8(%rbp),%eax
+  40d853:	48 98                	cltq   
+  40d855:	48 01 85 f0 fe ff ff 	add    %rax,-0x110(%rbp)
+  40d85c:	8b 85 28 ff ff ff    	mov    -0xd8(%rbp),%eax
+  40d862:	01 85 24 ff ff ff    	add    %eax,-0xdc(%rbp)
+	                D[i_ko] = (uchar)((unsigned)i_s0 <= UCHAR_MAX ? i_s0 : i_s0 > 0 ? UCHAR_MAX : 0);
+	            }
+	        }
+	    }
+	    //(*filter2D)((const uchar**)brows, dst, dststep, i, roi.width, cn);
+    }
+  40d868:	e9 b6 f5 ff ff       	jmpq   40ce23 <_ZN13FilterEngine27proceedEPKhiiPhiiiiPKfPS1_iPKN2cv6Point_IiEEPS2_S2_S2_fPKi+0x1cb>
+
+    dstY += dy;
+    //CV_Assert( dstY <= roi.height );
+    return dy;
+}
+

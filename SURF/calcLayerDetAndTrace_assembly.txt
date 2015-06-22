@@ -1,0 +1,1719 @@
+000000000040ad24 <_ZL20calcLayerDetAndTraceiiPKhiiiPfiS1_i>:
+//        }
+//    }
+//}
+
+static void calcLayerDetAndTrace( int sum_rows, int sum_cols, const uchar *sum_data, int sum_step_p0,  int size, int sampleStep, float *det_data, int det_step_p0, float *trace_data , int trace_step_p0)
+{
+  40ad24:	55                   	push   %rbp
+  40ad25:	48 89 e5             	mov    %rsp,%rbp
+  40ad28:	48 81 ec d4 01 00 00 	sub    $0x1d4,%rsp
+  40ad2f:	89 bd cc fd ff ff    	mov    %edi,-0x234(%rbp)
+  40ad35:	89 b5 c8 fd ff ff    	mov    %esi,-0x238(%rbp)
+  40ad3b:	48 89 95 c0 fd ff ff 	mov    %rdx,-0x240(%rbp)
+  40ad42:	89 8d bc fd ff ff    	mov    %ecx,-0x244(%rbp)
+  40ad48:	44 89 85 b8 fd ff ff 	mov    %r8d,-0x248(%rbp)
+  40ad4f:	44 89 8d b4 fd ff ff 	mov    %r9d,-0x24c(%rbp)
+    const int NX=3, NY=3, NXY=4;
+  40ad56:	c7 85 fc fd ff ff 03 	movl   $0x3,-0x204(%rbp)
+  40ad5d:	00 00 00 
+  40ad60:	c7 85 00 fe ff ff 03 	movl   $0x3,-0x200(%rbp)
+  40ad67:	00 00 00 
+  40ad6a:	c7 85 04 fe ff ff 04 	movl   $0x4,-0x1fc(%rbp)
+  40ad71:	00 00 00 
+    const int dx_s[NX][5] = { {0, 2, 3, 7, 1}, {3, 2, 6, 7, -2}, {6, 2, 9, 7, 1} };
+  40ad74:	c7 85 f0 fe ff ff 00 	movl   $0x0,-0x110(%rbp)
+  40ad7b:	00 00 00 
+  40ad7e:	c7 85 f4 fe ff ff 02 	movl   $0x2,-0x10c(%rbp)
+  40ad85:	00 00 00 
+  40ad88:	c7 85 f8 fe ff ff 03 	movl   $0x3,-0x108(%rbp)
+  40ad8f:	00 00 00 
+  40ad92:	c7 85 fc fe ff ff 07 	movl   $0x7,-0x104(%rbp)
+  40ad99:	00 00 00 
+  40ad9c:	c7 85 00 ff ff ff 01 	movl   $0x1,-0x100(%rbp)
+  40ada3:	00 00 00 
+  40ada6:	c7 85 04 ff ff ff 03 	movl   $0x3,-0xfc(%rbp)
+  40adad:	00 00 00 
+  40adb0:	c7 85 08 ff ff ff 02 	movl   $0x2,-0xf8(%rbp)
+  40adb7:	00 00 00 
+  40adba:	c7 85 0c ff ff ff 06 	movl   $0x6,-0xf4(%rbp)
+  40adc1:	00 00 00 
+  40adc4:	c7 85 10 ff ff ff 07 	movl   $0x7,-0xf0(%rbp)
+  40adcb:	00 00 00 
+  40adce:	c7 85 14 ff ff ff fe 	movl   $0xfffffffe,-0xec(%rbp)
+  40add5:	ff ff ff 
+  40add8:	c7 85 18 ff ff ff 06 	movl   $0x6,-0xe8(%rbp)
+  40addf:	00 00 00 
+  40ade2:	c7 85 1c ff ff ff 02 	movl   $0x2,-0xe4(%rbp)
+  40ade9:	00 00 00 
+  40adec:	c7 85 20 ff ff ff 09 	movl   $0x9,-0xe0(%rbp)
+  40adf3:	00 00 00 
+  40adf6:	c7 85 24 ff ff ff 07 	movl   $0x7,-0xdc(%rbp)
+  40adfd:	00 00 00 
+  40ae00:	c7 85 28 ff ff ff 01 	movl   $0x1,-0xd8(%rbp)
+  40ae07:	00 00 00 
+    const int dy_s[NY][5] = { {2, 0, 7, 3, 1}, {2, 3, 7, 6, -2}, {2, 6, 7, 9, 1} };
+  40ae0a:	c7 85 30 ff ff ff 02 	movl   $0x2,-0xd0(%rbp)
+  40ae11:	00 00 00 
+  40ae14:	c7 85 34 ff ff ff 00 	movl   $0x0,-0xcc(%rbp)
+  40ae1b:	00 00 00 
+  40ae1e:	c7 85 38 ff ff ff 07 	movl   $0x7,-0xc8(%rbp)
+  40ae25:	00 00 00 
+  40ae28:	c7 85 3c ff ff ff 03 	movl   $0x3,-0xc4(%rbp)
+  40ae2f:	00 00 00 
+  40ae32:	c7 85 40 ff ff ff 01 	movl   $0x1,-0xc0(%rbp)
+  40ae39:	00 00 00 
+  40ae3c:	c7 85 44 ff ff ff 02 	movl   $0x2,-0xbc(%rbp)
+  40ae43:	00 00 00 
+  40ae46:	c7 85 48 ff ff ff 03 	movl   $0x3,-0xb8(%rbp)
+  40ae4d:	00 00 00 
+  40ae50:	c7 85 4c ff ff ff 07 	movl   $0x7,-0xb4(%rbp)
+  40ae57:	00 00 00 
+  40ae5a:	c7 85 50 ff ff ff 06 	movl   $0x6,-0xb0(%rbp)
+  40ae61:	00 00 00 
+  40ae64:	c7 85 54 ff ff ff fe 	movl   $0xfffffffe,-0xac(%rbp)
+  40ae6b:	ff ff ff 
+  40ae6e:	c7 85 58 ff ff ff 02 	movl   $0x2,-0xa8(%rbp)
+  40ae75:	00 00 00 
+  40ae78:	c7 85 5c ff ff ff 06 	movl   $0x6,-0xa4(%rbp)
+  40ae7f:	00 00 00 
+  40ae82:	c7 85 60 ff ff ff 07 	movl   $0x7,-0xa0(%rbp)
+  40ae89:	00 00 00 
+  40ae8c:	c7 85 64 ff ff ff 09 	movl   $0x9,-0x9c(%rbp)
+  40ae93:	00 00 00 
+  40ae96:	c7 85 68 ff ff ff 01 	movl   $0x1,-0x98(%rbp)
+  40ae9d:	00 00 00 
+    const int dxy_s[NXY][5] = { {1, 1, 4, 4, 1}, {5, 1, 8, 4, -1}, {1, 5, 4, 8, -1}, {5, 5, 8, 8, 1} };
+  40aea0:	c7 45 b0 01 00 00 00 	movl   $0x1,-0x50(%rbp)
+  40aea7:	c7 45 b4 01 00 00 00 	movl   $0x1,-0x4c(%rbp)
+  40aeae:	c7 45 b8 04 00 00 00 	movl   $0x4,-0x48(%rbp)
+  40aeb5:	c7 45 bc 04 00 00 00 	movl   $0x4,-0x44(%rbp)
+  40aebc:	c7 45 c0 01 00 00 00 	movl   $0x1,-0x40(%rbp)
+  40aec3:	c7 45 c4 05 00 00 00 	movl   $0x5,-0x3c(%rbp)
+  40aeca:	c7 45 c8 01 00 00 00 	movl   $0x1,-0x38(%rbp)
+  40aed1:	c7 45 cc 08 00 00 00 	movl   $0x8,-0x34(%rbp)
+  40aed8:	c7 45 d0 04 00 00 00 	movl   $0x4,-0x30(%rbp)
+  40aedf:	c7 45 d4 ff ff ff ff 	movl   $0xffffffff,-0x2c(%rbp)
+  40aee6:	c7 45 d8 01 00 00 00 	movl   $0x1,-0x28(%rbp)
+  40aeed:	c7 45 dc 05 00 00 00 	movl   $0x5,-0x24(%rbp)
+  40aef4:	c7 45 e0 04 00 00 00 	movl   $0x4,-0x20(%rbp)
+  40aefb:	c7 45 e4 08 00 00 00 	movl   $0x8,-0x1c(%rbp)
+  40af02:	c7 45 e8 ff ff ff ff 	movl   $0xffffffff,-0x18(%rbp)
+  40af09:	c7 45 ec 05 00 00 00 	movl   $0x5,-0x14(%rbp)
+  40af10:	c7 45 f0 05 00 00 00 	movl   $0x5,-0x10(%rbp)
+  40af17:	c7 45 f4 08 00 00 00 	movl   $0x8,-0xc(%rbp)
+  40af1e:	c7 45 f8 08 00 00 00 	movl   $0x8,-0x8(%rbp)
+  40af25:	c7 45 fc 01 00 00 00 	movl   $0x1,-0x4(%rbp)
+
+    //SURF2HF Dx[NX], Dy[NY], Dxy[NXY];
+    int Dx[NX][4], Dy[NY][4], Dxy[NXY][4];
+    float Dx_float[NX], Dy_float[NY], Dxy_float[NXY];
+    Dx[0][0] = 0;
+  40af2c:	c7 85 90 fe ff ff 00 	movl   $0x0,-0x170(%rbp)
+  40af33:	00 00 00 
+    Dx[0][1] = 0;
+  40af36:	c7 85 94 fe ff ff 00 	movl   $0x0,-0x16c(%rbp)
+  40af3d:	00 00 00 
+    Dx[0][2] = 0;
+  40af40:	c7 85 98 fe ff ff 00 	movl   $0x0,-0x168(%rbp)
+  40af47:	00 00 00 
+    Dx[0][3] = 0;
+  40af4a:	c7 85 9c fe ff ff 00 	movl   $0x0,-0x164(%rbp)
+  40af51:	00 00 00 
+
+    Dx[1][0] = 0;
+  40af54:	c7 85 a0 fe ff ff 00 	movl   $0x0,-0x160(%rbp)
+  40af5b:	00 00 00 
+    Dx[1][1] = 0;
+  40af5e:	c7 85 a4 fe ff ff 00 	movl   $0x0,-0x15c(%rbp)
+  40af65:	00 00 00 
+    Dx[1][2] = 0;
+  40af68:	c7 85 a8 fe ff ff 00 	movl   $0x0,-0x158(%rbp)
+  40af6f:	00 00 00 
+    Dx[1][3] = 0;
+  40af72:	c7 85 ac fe ff ff 00 	movl   $0x0,-0x154(%rbp)
+  40af79:	00 00 00 
+
+    Dx[2][0] = 0;
+  40af7c:	c7 85 b0 fe ff ff 00 	movl   $0x0,-0x150(%rbp)
+  40af83:	00 00 00 
+    Dx[2][1] = 0;
+  40af86:	c7 85 b4 fe ff ff 00 	movl   $0x0,-0x14c(%rbp)
+  40af8d:	00 00 00 
+    Dx[2][2] = 0;
+  40af90:	c7 85 b8 fe ff ff 00 	movl   $0x0,-0x148(%rbp)
+  40af97:	00 00 00 
+    Dx[2][3] = 0;
+  40af9a:	c7 85 bc fe ff ff 00 	movl   $0x0,-0x144(%rbp)
+  40afa1:	00 00 00 
+    
+    Dx_float[0] = 0;
+  40afa4:	8b 05 46 f0 4d 00    	mov    0x4df046(%rip),%eax        # 8e9ff0 <_ZZL18__gthread_active_pvE20__gthread_active_ptr+0x20>
+  40afaa:	89 85 60 fe ff ff    	mov    %eax,-0x1a0(%rbp)
+    Dx_float[1] = 0;
+  40afb0:	8b 05 3a f0 4d 00    	mov    0x4df03a(%rip),%eax        # 8e9ff0 <_ZZL18__gthread_active_pvE20__gthread_active_ptr+0x20>
+  40afb6:	89 85 64 fe ff ff    	mov    %eax,-0x19c(%rbp)
+    Dx_float[2] = 0;
+  40afbc:	8b 05 2e f0 4d 00    	mov    0x4df02e(%rip),%eax        # 8e9ff0 <_ZZL18__gthread_active_pvE20__gthread_active_ptr+0x20>
+  40afc2:	89 85 68 fe ff ff    	mov    %eax,-0x198(%rbp)
+
+    Dy[0][0] = 0;
+  40afc8:	c7 85 c0 fe ff ff 00 	movl   $0x0,-0x140(%rbp)
+  40afcf:	00 00 00 
+    Dy[0][1] = 0;
+  40afd2:	c7 85 c4 fe ff ff 00 	movl   $0x0,-0x13c(%rbp)
+  40afd9:	00 00 00 
+    Dy[0][2] = 0;
+  40afdc:	c7 85 c8 fe ff ff 00 	movl   $0x0,-0x138(%rbp)
+  40afe3:	00 00 00 
+    Dy[0][3] = 0;
+  40afe6:	c7 85 cc fe ff ff 00 	movl   $0x0,-0x134(%rbp)
+  40afed:	00 00 00 
+
+    Dy[1][0] = 0;
+  40aff0:	c7 85 d0 fe ff ff 00 	movl   $0x0,-0x130(%rbp)
+  40aff7:	00 00 00 
+    Dy[1][1] = 0;
+  40affa:	c7 85 d4 fe ff ff 00 	movl   $0x0,-0x12c(%rbp)
+  40b001:	00 00 00 
+    Dy[1][2] = 0;
+  40b004:	c7 85 d8 fe ff ff 00 	movl   $0x0,-0x128(%rbp)
+  40b00b:	00 00 00 
+    Dy[1][3] = 0;
+  40b00e:	c7 85 dc fe ff ff 00 	movl   $0x0,-0x124(%rbp)
+  40b015:	00 00 00 
+
+    Dy[2][0] = 0;
+  40b018:	c7 85 e0 fe ff ff 00 	movl   $0x0,-0x120(%rbp)
+  40b01f:	00 00 00 
+    Dy[2][1] = 0;
+  40b022:	c7 85 e4 fe ff ff 00 	movl   $0x0,-0x11c(%rbp)
+  40b029:	00 00 00 
+    Dy[2][2] = 0;
+  40b02c:	c7 85 e8 fe ff ff 00 	movl   $0x0,-0x118(%rbp)
+  40b033:	00 00 00 
+    Dy[2][3] = 0;
+  40b036:	c7 85 ec fe ff ff 00 	movl   $0x0,-0x114(%rbp)
+  40b03d:	00 00 00 
+
+    Dy_float[0] = 0;
+  40b040:	8b 05 aa ef 4d 00    	mov    0x4defaa(%rip),%eax        # 8e9ff0 <_ZZL18__gthread_active_pvE20__gthread_active_ptr+0x20>
+  40b046:	89 85 70 fe ff ff    	mov    %eax,-0x190(%rbp)
+    Dy_float[1] = 0;
+  40b04c:	8b 05 9e ef 4d 00    	mov    0x4def9e(%rip),%eax        # 8e9ff0 <_ZZL18__gthread_active_pvE20__gthread_active_ptr+0x20>
+  40b052:	89 85 74 fe ff ff    	mov    %eax,-0x18c(%rbp)
+    Dy_float[2] = 0;
+  40b058:	8b 05 92 ef 4d 00    	mov    0x4def92(%rip),%eax        # 8e9ff0 <_ZZL18__gthread_active_pvE20__gthread_active_ptr+0x20>
+  40b05e:	89 85 78 fe ff ff    	mov    %eax,-0x188(%rbp)
+
+    Dxy[0][0] = 0;
+  40b064:	c7 85 70 ff ff ff 00 	movl   $0x0,-0x90(%rbp)
+  40b06b:	00 00 00 
+    Dxy[0][1] = 0;
+  40b06e:	c7 85 74 ff ff ff 00 	movl   $0x0,-0x8c(%rbp)
+  40b075:	00 00 00 
+    Dxy[0][2] = 0;
+  40b078:	c7 85 78 ff ff ff 00 	movl   $0x0,-0x88(%rbp)
+  40b07f:	00 00 00 
+    Dxy[0][3] = 0;
+  40b082:	c7 85 7c ff ff ff 00 	movl   $0x0,-0x84(%rbp)
+  40b089:	00 00 00 
+
+    Dxy[1][0] = 0;
+  40b08c:	c7 45 80 00 00 00 00 	movl   $0x0,-0x80(%rbp)
+    Dxy[1][1] = 0;
+  40b093:	c7 45 84 00 00 00 00 	movl   $0x0,-0x7c(%rbp)
+    Dxy[1][2] = 0;
+  40b09a:	c7 45 88 00 00 00 00 	movl   $0x0,-0x78(%rbp)
+    Dxy[1][3] = 0;
+  40b0a1:	c7 45 8c 00 00 00 00 	movl   $0x0,-0x74(%rbp)
+
+    Dxy[2][0] = 0;
+  40b0a8:	c7 45 90 00 00 00 00 	movl   $0x0,-0x70(%rbp)
+    Dxy[2][1] = 0;
+  40b0af:	c7 45 94 00 00 00 00 	movl   $0x0,-0x6c(%rbp)
+    Dxy[2][2] = 0;
+  40b0b6:	c7 45 98 00 00 00 00 	movl   $0x0,-0x68(%rbp)
+    Dxy[2][3] = 0;
+  40b0bd:	c7 45 9c 00 00 00 00 	movl   $0x0,-0x64(%rbp)
+
+    Dxy[3][0] = 0;
+  40b0c4:	c7 45 a0 00 00 00 00 	movl   $0x0,-0x60(%rbp)
+    Dxy[3][1] = 0;
+  40b0cb:	c7 45 a4 00 00 00 00 	movl   $0x0,-0x5c(%rbp)
+    Dxy[3][2] = 0;
+  40b0d2:	c7 45 a8 00 00 00 00 	movl   $0x0,-0x58(%rbp)
+    Dxy[3][3] = 0;
+  40b0d9:	c7 45 ac 00 00 00 00 	movl   $0x0,-0x54(%rbp)
+
+    Dxy_float[0] = 0;
+  40b0e0:	8b 05 0a ef 4d 00    	mov    0x4def0a(%rip),%eax        # 8e9ff0 <_ZZL18__gthread_active_pvE20__gthread_active_ptr+0x20>
+  40b0e6:	89 85 80 fe ff ff    	mov    %eax,-0x180(%rbp)
+    Dxy_float[1] = 0;
+  40b0ec:	8b 05 fe ee 4d 00    	mov    0x4deefe(%rip),%eax        # 8e9ff0 <_ZZL18__gthread_active_pvE20__gthread_active_ptr+0x20>
+  40b0f2:	89 85 84 fe ff ff    	mov    %eax,-0x17c(%rbp)
+    Dxy_float[2] = 0;
+  40b0f8:	8b 05 f2 ee 4d 00    	mov    0x4deef2(%rip),%eax        # 8e9ff0 <_ZZL18__gthread_active_pvE20__gthread_active_ptr+0x20>
+  40b0fe:	89 85 88 fe ff ff    	mov    %eax,-0x178(%rbp)
+    Dxy_float[3] = 0;
+  40b104:	8b 05 e6 ee 4d 00    	mov    0x4deee6(%rip),%eax        # 8e9ff0 <_ZZL18__gthread_active_pvE20__gthread_active_ptr+0x20>
+  40b10a:	89 85 8c fe ff ff    	mov    %eax,-0x174(%rbp)
+
+    //resizeHaarPattern( dx_s , Dx , NX , 9, size, sum_cols );    
+    float ratio = (float)size/9;
+  40b110:	f3 0f 2a 85 b8 fd ff 	cvtsi2ssl -0x248(%rbp),%xmm0
+  40b117:	ff 
+  40b118:	f3 0f 10 0d d8 ee 4d 	movss  0x4deed8(%rip),%xmm1        # 8e9ff8 <_ZZL18__gthread_active_pvE20__gthread_active_ptr+0x28>
+  40b11f:	00 
+  40b120:	f3 0f 5e c1          	divss  %xmm1,%xmm0
+  40b124:	f3 0f 11 85 08 fe ff 	movss  %xmm0,-0x1f8(%rbp)
+  40b12b:	ff 
+    for( int k = 0; k < NX; k++ )
+  40b12c:	c7 85 d0 fd ff ff 00 	movl   $0x0,-0x230(%rbp)
+  40b133:	00 00 00 
+  40b136:	e9 d2 04 00 00       	jmpq   40b60d <_ZL20calcLayerDetAndTraceiiPKhiiiPfiS1_i+0x8e9>
+    {
+        int dx1 = My_Round( ratio*dx_s[k][0] );
+  40b13b:	8b 85 d0 fd ff ff    	mov    -0x230(%rbp),%eax
+  40b141:	48 63 d0             	movslq %eax,%rdx
+  40b144:	48 89 d0             	mov    %rdx,%rax
+  40b147:	48 c1 e0 02          	shl    $0x2,%rax
+  40b14b:	48 01 d0             	add    %rdx,%rax
+  40b14e:	48 c1 e0 02          	shl    $0x2,%rax
+  40b152:	48 01 e8             	add    %rbp,%rax
+  40b155:	48 2d 10 01 00 00    	sub    $0x110,%rax
+  40b15b:	8b 00                	mov    (%rax),%eax
+  40b15d:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40b161:	f3 0f 59 85 08 fe ff 	mulss  -0x1f8(%rbp),%xmm0
+  40b168:	ff 
+  40b169:	0f 14 c0             	unpcklps %xmm0,%xmm0
+  40b16c:	0f 5a c0             	cvtps2pd %xmm0,%xmm0
+  40b16f:	8b 85 d0 fd ff ff    	mov    -0x230(%rbp),%eax
+  40b175:	48 63 d0             	movslq %eax,%rdx
+  40b178:	48 89 d0             	mov    %rdx,%rax
+  40b17b:	48 c1 e0 02          	shl    $0x2,%rax
+  40b17f:	48 01 d0             	add    %rdx,%rax
+  40b182:	48 c1 e0 02          	shl    $0x2,%rax
+  40b186:	48 01 e8             	add    %rbp,%rax
+  40b189:	48 2d 10 01 00 00    	sub    $0x110,%rax
+  40b18f:	8b 00                	mov    (%rax),%eax
+  40b191:	f3 0f 2a c8          	cvtsi2ss %eax,%xmm1
+  40b195:	f3 0f 59 8d 08 fe ff 	mulss  -0x1f8(%rbp),%xmm1
+  40b19c:	ff 
+  40b19d:	f3 0f 2c c1          	cvttss2si %xmm1,%eax
+  40b1a1:	f2 0f 2a c8          	cvtsi2sd %eax,%xmm1
+  40b1a5:	f2 0f 10 15 53 ee 4d 	movsd  0x4dee53(%rip),%xmm2        # 8ea000 <_ZZL18__gthread_active_pvE20__gthread_active_ptr+0x30>
+  40b1ac:	00 
+  40b1ad:	f2 0f 58 ca          	addsd  %xmm2,%xmm1
+  40b1b1:	66 0f 2e c1          	ucomisd %xmm1,%xmm0
+  40b1b5:	72 37                	jb     40b1ee <_ZL20calcLayerDetAndTraceiiPKhiiiPfiS1_i+0x4ca>
+  40b1b7:	8b 85 d0 fd ff ff    	mov    -0x230(%rbp),%eax
+  40b1bd:	48 63 d0             	movslq %eax,%rdx
+  40b1c0:	48 89 d0             	mov    %rdx,%rax
+  40b1c3:	48 c1 e0 02          	shl    $0x2,%rax
+  40b1c7:	48 01 d0             	add    %rdx,%rax
+  40b1ca:	48 c1 e0 02          	shl    $0x2,%rax
+  40b1ce:	48 01 e8             	add    %rbp,%rax
+  40b1d1:	48 2d 10 01 00 00    	sub    $0x110,%rax
+  40b1d7:	8b 00                	mov    (%rax),%eax
+  40b1d9:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40b1dd:	f3 0f 59 85 08 fe ff 	mulss  -0x1f8(%rbp),%xmm0
+  40b1e4:	ff 
+  40b1e5:	f3 0f 2c c0          	cvttss2si %xmm0,%eax
+  40b1e9:	83 c0 01             	add    $0x1,%eax
+  40b1ec:	eb 32                	jmp    40b220 <_ZL20calcLayerDetAndTraceiiPKhiiiPfiS1_i+0x4fc>
+  40b1ee:	8b 85 d0 fd ff ff    	mov    -0x230(%rbp),%eax
+  40b1f4:	48 63 d0             	movslq %eax,%rdx
+  40b1f7:	48 89 d0             	mov    %rdx,%rax
+  40b1fa:	48 c1 e0 02          	shl    $0x2,%rax
+  40b1fe:	48 01 d0             	add    %rdx,%rax
+  40b201:	48 c1 e0 02          	shl    $0x2,%rax
+  40b205:	48 01 e8             	add    %rbp,%rax
+  40b208:	48 2d 10 01 00 00    	sub    $0x110,%rax
+  40b20e:	8b 00                	mov    (%rax),%eax
+  40b210:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40b214:	f3 0f 59 85 08 fe ff 	mulss  -0x1f8(%rbp),%xmm0
+  40b21b:	ff 
+  40b21c:	f3 0f 2c c0          	cvttss2si %xmm0,%eax
+  40b220:	89 85 0c fe ff ff    	mov    %eax,-0x1f4(%rbp)
+        int dy1 = My_Round( ratio*dx_s[k][1] );
+  40b226:	8b 85 d0 fd ff ff    	mov    -0x230(%rbp),%eax
+  40b22c:	48 63 d0             	movslq %eax,%rdx
+  40b22f:	48 89 d0             	mov    %rdx,%rax
+  40b232:	48 c1 e0 02          	shl    $0x2,%rax
+  40b236:	48 01 d0             	add    %rdx,%rax
+  40b239:	48 c1 e0 02          	shl    $0x2,%rax
+  40b23d:	48 01 e8             	add    %rbp,%rax
+  40b240:	48 2d 0c 01 00 00    	sub    $0x10c,%rax
+  40b246:	8b 00                	mov    (%rax),%eax
+  40b248:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40b24c:	f3 0f 59 85 08 fe ff 	mulss  -0x1f8(%rbp),%xmm0
+  40b253:	ff 
+  40b254:	0f 14 c0             	unpcklps %xmm0,%xmm0
+  40b257:	0f 5a c0             	cvtps2pd %xmm0,%xmm0
+  40b25a:	8b 85 d0 fd ff ff    	mov    -0x230(%rbp),%eax
+  40b260:	48 63 d0             	movslq %eax,%rdx
+  40b263:	48 89 d0             	mov    %rdx,%rax
+  40b266:	48 c1 e0 02          	shl    $0x2,%rax
+  40b26a:	48 01 d0             	add    %rdx,%rax
+  40b26d:	48 c1 e0 02          	shl    $0x2,%rax
+  40b271:	48 01 e8             	add    %rbp,%rax
+  40b274:	48 2d 0c 01 00 00    	sub    $0x10c,%rax
+  40b27a:	8b 00                	mov    (%rax),%eax
+  40b27c:	f3 0f 2a c8          	cvtsi2ss %eax,%xmm1
+  40b280:	f3 0f 59 8d 08 fe ff 	mulss  -0x1f8(%rbp),%xmm1
+  40b287:	ff 
+  40b288:	f3 0f 2c c1          	cvttss2si %xmm1,%eax
+  40b28c:	f2 0f 2a c8          	cvtsi2sd %eax,%xmm1
+  40b290:	f2 0f 10 15 68 ed 4d 	movsd  0x4ded68(%rip),%xmm2        # 8ea000 <_ZZL18__gthread_active_pvE20__gthread_active_ptr+0x30>
+  40b297:	00 
+  40b298:	f2 0f 58 ca          	addsd  %xmm2,%xmm1
+  40b29c:	66 0f 2e c1          	ucomisd %xmm1,%xmm0
+  40b2a0:	72 37                	jb     40b2d9 <_ZL20calcLayerDetAndTraceiiPKhiiiPfiS1_i+0x5b5>
+  40b2a2:	8b 85 d0 fd ff ff    	mov    -0x230(%rbp),%eax
+  40b2a8:	48 63 d0             	movslq %eax,%rdx
+  40b2ab:	48 89 d0             	mov    %rdx,%rax
+  40b2ae:	48 c1 e0 02          	shl    $0x2,%rax
+  40b2b2:	48 01 d0             	add    %rdx,%rax
+  40b2b5:	48 c1 e0 02          	shl    $0x2,%rax
+  40b2b9:	48 01 e8             	add    %rbp,%rax
+  40b2bc:	48 2d 0c 01 00 00    	sub    $0x10c,%rax
+  40b2c2:	8b 00                	mov    (%rax),%eax
+  40b2c4:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40b2c8:	f3 0f 59 85 08 fe ff 	mulss  -0x1f8(%rbp),%xmm0
+  40b2cf:	ff 
+  40b2d0:	f3 0f 2c c0          	cvttss2si %xmm0,%eax
+  40b2d4:	83 c0 01             	add    $0x1,%eax
+  40b2d7:	eb 32                	jmp    40b30b <_ZL20calcLayerDetAndTraceiiPKhiiiPfiS1_i+0x5e7>
+  40b2d9:	8b 85 d0 fd ff ff    	mov    -0x230(%rbp),%eax
+  40b2df:	48 63 d0             	movslq %eax,%rdx
+  40b2e2:	48 89 d0             	mov    %rdx,%rax
+  40b2e5:	48 c1 e0 02          	shl    $0x2,%rax
+  40b2e9:	48 01 d0             	add    %rdx,%rax
+  40b2ec:	48 c1 e0 02          	shl    $0x2,%rax
+  40b2f0:	48 01 e8             	add    %rbp,%rax
+  40b2f3:	48 2d 0c 01 00 00    	sub    $0x10c,%rax
+  40b2f9:	8b 00                	mov    (%rax),%eax
+  40b2fb:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40b2ff:	f3 0f 59 85 08 fe ff 	mulss  -0x1f8(%rbp),%xmm0
+  40b306:	ff 
+  40b307:	f3 0f 2c c0          	cvttss2si %xmm0,%eax
+  40b30b:	89 85 10 fe ff ff    	mov    %eax,-0x1f0(%rbp)
+        int dx2 = My_Round( ratio*dx_s[k][2] );
+  40b311:	8b 85 d0 fd ff ff    	mov    -0x230(%rbp),%eax
+  40b317:	48 63 d0             	movslq %eax,%rdx
+  40b31a:	48 89 d0             	mov    %rdx,%rax
+  40b31d:	48 c1 e0 02          	shl    $0x2,%rax
+  40b321:	48 01 d0             	add    %rdx,%rax
+  40b324:	48 c1 e0 02          	shl    $0x2,%rax
+  40b328:	48 01 e8             	add    %rbp,%rax
+  40b32b:	48 2d 08 01 00 00    	sub    $0x108,%rax
+  40b331:	8b 00                	mov    (%rax),%eax
+  40b333:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40b337:	f3 0f 59 85 08 fe ff 	mulss  -0x1f8(%rbp),%xmm0
+  40b33e:	ff 
+  40b33f:	0f 14 c0             	unpcklps %xmm0,%xmm0
+  40b342:	0f 5a c0             	cvtps2pd %xmm0,%xmm0
+  40b345:	8b 85 d0 fd ff ff    	mov    -0x230(%rbp),%eax
+  40b34b:	48 63 d0             	movslq %eax,%rdx
+  40b34e:	48 89 d0             	mov    %rdx,%rax
+  40b351:	48 c1 e0 02          	shl    $0x2,%rax
+  40b355:	48 01 d0             	add    %rdx,%rax
+  40b358:	48 c1 e0 02          	shl    $0x2,%rax
+  40b35c:	48 01 e8             	add    %rbp,%rax
+  40b35f:	48 2d 08 01 00 00    	sub    $0x108,%rax
+  40b365:	8b 00                	mov    (%rax),%eax
+  40b367:	f3 0f 2a c8          	cvtsi2ss %eax,%xmm1
+  40b36b:	f3 0f 59 8d 08 fe ff 	mulss  -0x1f8(%rbp),%xmm1
+  40b372:	ff 
+  40b373:	f3 0f 2c c1          	cvttss2si %xmm1,%eax
+  40b377:	f2 0f 2a c8          	cvtsi2sd %eax,%xmm1
+  40b37b:	f2 0f 10 15 7d ec 4d 	movsd  0x4dec7d(%rip),%xmm2        # 8ea000 <_ZZL18__gthread_active_pvE20__gthread_active_ptr+0x30>
+  40b382:	00 
+  40b383:	f2 0f 58 ca          	addsd  %xmm2,%xmm1
+  40b387:	66 0f 2e c1          	ucomisd %xmm1,%xmm0
+  40b38b:	72 37                	jb     40b3c4 <_ZL20calcLayerDetAndTraceiiPKhiiiPfiS1_i+0x6a0>
+  40b38d:	8b 85 d0 fd ff ff    	mov    -0x230(%rbp),%eax
+  40b393:	48 63 d0             	movslq %eax,%rdx
+  40b396:	48 89 d0             	mov    %rdx,%rax
+  40b399:	48 c1 e0 02          	shl    $0x2,%rax
+  40b39d:	48 01 d0             	add    %rdx,%rax
+  40b3a0:	48 c1 e0 02          	shl    $0x2,%rax
+  40b3a4:	48 01 e8             	add    %rbp,%rax
+  40b3a7:	48 2d 08 01 00 00    	sub    $0x108,%rax
+  40b3ad:	8b 00                	mov    (%rax),%eax
+  40b3af:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40b3b3:	f3 0f 59 85 08 fe ff 	mulss  -0x1f8(%rbp),%xmm0
+  40b3ba:	ff 
+  40b3bb:	f3 0f 2c c0          	cvttss2si %xmm0,%eax
+  40b3bf:	83 c0 01             	add    $0x1,%eax
+  40b3c2:	eb 32                	jmp    40b3f6 <_ZL20calcLayerDetAndTraceiiPKhiiiPfiS1_i+0x6d2>
+  40b3c4:	8b 85 d0 fd ff ff    	mov    -0x230(%rbp),%eax
+  40b3ca:	48 63 d0             	movslq %eax,%rdx
+  40b3cd:	48 89 d0             	mov    %rdx,%rax
+  40b3d0:	48 c1 e0 02          	shl    $0x2,%rax
+  40b3d4:	48 01 d0             	add    %rdx,%rax
+  40b3d7:	48 c1 e0 02          	shl    $0x2,%rax
+  40b3db:	48 01 e8             	add    %rbp,%rax
+  40b3de:	48 2d 08 01 00 00    	sub    $0x108,%rax
+  40b3e4:	8b 00                	mov    (%rax),%eax
+  40b3e6:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40b3ea:	f3 0f 59 85 08 fe ff 	mulss  -0x1f8(%rbp),%xmm0
+  40b3f1:	ff 
+  40b3f2:	f3 0f 2c c0          	cvttss2si %xmm0,%eax
+  40b3f6:	89 85 14 fe ff ff    	mov    %eax,-0x1ec(%rbp)
+        int dy2 = My_Round( ratio*dx_s[k][3] );
+  40b3fc:	8b 85 d0 fd ff ff    	mov    -0x230(%rbp),%eax
+  40b402:	48 63 d0             	movslq %eax,%rdx
+  40b405:	48 89 d0             	mov    %rdx,%rax
+  40b408:	48 c1 e0 02          	shl    $0x2,%rax
+  40b40c:	48 01 d0             	add    %rdx,%rax
+  40b40f:	48 c1 e0 02          	shl    $0x2,%rax
+  40b413:	48 01 e8             	add    %rbp,%rax
+  40b416:	48 2d 04 01 00 00    	sub    $0x104,%rax
+  40b41c:	8b 00                	mov    (%rax),%eax
+  40b41e:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40b422:	f3 0f 59 85 08 fe ff 	mulss  -0x1f8(%rbp),%xmm0
+  40b429:	ff 
+  40b42a:	0f 14 c0             	unpcklps %xmm0,%xmm0
+  40b42d:	0f 5a c0             	cvtps2pd %xmm0,%xmm0
+  40b430:	8b 85 d0 fd ff ff    	mov    -0x230(%rbp),%eax
+  40b436:	48 63 d0             	movslq %eax,%rdx
+  40b439:	48 89 d0             	mov    %rdx,%rax
+  40b43c:	48 c1 e0 02          	shl    $0x2,%rax
+  40b440:	48 01 d0             	add    %rdx,%rax
+  40b443:	48 c1 e0 02          	shl    $0x2,%rax
+  40b447:	48 01 e8             	add    %rbp,%rax
+  40b44a:	48 2d 04 01 00 00    	sub    $0x104,%rax
+  40b450:	8b 00                	mov    (%rax),%eax
+  40b452:	f3 0f 2a c8          	cvtsi2ss %eax,%xmm1
+  40b456:	f3 0f 59 8d 08 fe ff 	mulss  -0x1f8(%rbp),%xmm1
+  40b45d:	ff 
+  40b45e:	f3 0f 2c c1          	cvttss2si %xmm1,%eax
+  40b462:	f2 0f 2a c8          	cvtsi2sd %eax,%xmm1
+  40b466:	f2 0f 10 15 92 eb 4d 	movsd  0x4deb92(%rip),%xmm2        # 8ea000 <_ZZL18__gthread_active_pvE20__gthread_active_ptr+0x30>
+  40b46d:	00 
+  40b46e:	f2 0f 58 ca          	addsd  %xmm2,%xmm1
+  40b472:	66 0f 2e c1          	ucomisd %xmm1,%xmm0
+  40b476:	72 37                	jb     40b4af <_ZL20calcLayerDetAndTraceiiPKhiiiPfiS1_i+0x78b>
+  40b478:	8b 85 d0 fd ff ff    	mov    -0x230(%rbp),%eax
+  40b47e:	48 63 d0             	movslq %eax,%rdx
+  40b481:	48 89 d0             	mov    %rdx,%rax
+  40b484:	48 c1 e0 02          	shl    $0x2,%rax
+  40b488:	48 01 d0             	add    %rdx,%rax
+  40b48b:	48 c1 e0 02          	shl    $0x2,%rax
+  40b48f:	48 01 e8             	add    %rbp,%rax
+  40b492:	48 2d 04 01 00 00    	sub    $0x104,%rax
+  40b498:	8b 00                	mov    (%rax),%eax
+  40b49a:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40b49e:	f3 0f 59 85 08 fe ff 	mulss  -0x1f8(%rbp),%xmm0
+  40b4a5:	ff 
+  40b4a6:	f3 0f 2c c0          	cvttss2si %xmm0,%eax
+  40b4aa:	83 c0 01             	add    $0x1,%eax
+  40b4ad:	eb 32                	jmp    40b4e1 <_ZL20calcLayerDetAndTraceiiPKhiiiPfiS1_i+0x7bd>
+  40b4af:	8b 85 d0 fd ff ff    	mov    -0x230(%rbp),%eax
+  40b4b5:	48 63 d0             	movslq %eax,%rdx
+  40b4b8:	48 89 d0             	mov    %rdx,%rax
+  40b4bb:	48 c1 e0 02          	shl    $0x2,%rax
+  40b4bf:	48 01 d0             	add    %rdx,%rax
+  40b4c2:	48 c1 e0 02          	shl    $0x2,%rax
+  40b4c6:	48 01 e8             	add    %rbp,%rax
+  40b4c9:	48 2d 04 01 00 00    	sub    $0x104,%rax
+  40b4cf:	8b 00                	mov    (%rax),%eax
+  40b4d1:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40b4d5:	f3 0f 59 85 08 fe ff 	mulss  -0x1f8(%rbp),%xmm0
+  40b4dc:	ff 
+  40b4dd:	f3 0f 2c c0          	cvttss2si %xmm0,%eax
+  40b4e1:	89 85 18 fe ff ff    	mov    %eax,-0x1e8(%rbp)
+        Dx[k][0] = dy1*sum_cols + dx1;
+  40b4e7:	8b 85 10 fe ff ff    	mov    -0x1f0(%rbp),%eax
+  40b4ed:	0f af 85 c8 fd ff ff 	imul   -0x238(%rbp),%eax
+  40b4f4:	89 c2                	mov    %eax,%edx
+  40b4f6:	8b 85 0c fe ff ff    	mov    -0x1f4(%rbp),%eax
+  40b4fc:	01 c2                	add    %eax,%edx
+  40b4fe:	8b 85 d0 fd ff ff    	mov    -0x230(%rbp),%eax
+  40b504:	48 98                	cltq   
+  40b506:	48 c1 e0 04          	shl    $0x4,%rax
+  40b50a:	48 01 e8             	add    %rbp,%rax
+  40b50d:	48 2d 70 01 00 00    	sub    $0x170,%rax
+  40b513:	89 10                	mov    %edx,(%rax)
+        Dx[k][1] = dy2*sum_cols + dx1;
+  40b515:	8b 85 18 fe ff ff    	mov    -0x1e8(%rbp),%eax
+  40b51b:	0f af 85 c8 fd ff ff 	imul   -0x238(%rbp),%eax
+  40b522:	89 c2                	mov    %eax,%edx
+  40b524:	8b 85 0c fe ff ff    	mov    -0x1f4(%rbp),%eax
+  40b52a:	01 c2                	add    %eax,%edx
+  40b52c:	8b 85 d0 fd ff ff    	mov    -0x230(%rbp),%eax
+  40b532:	48 98                	cltq   
+  40b534:	48 c1 e0 04          	shl    $0x4,%rax
+  40b538:	48 01 e8             	add    %rbp,%rax
+  40b53b:	48 2d 6c 01 00 00    	sub    $0x16c,%rax
+  40b541:	89 10                	mov    %edx,(%rax)
+        Dx[k][2] = dy1*sum_cols + dx2;
+  40b543:	8b 85 10 fe ff ff    	mov    -0x1f0(%rbp),%eax
+  40b549:	0f af 85 c8 fd ff ff 	imul   -0x238(%rbp),%eax
+  40b550:	89 c2                	mov    %eax,%edx
+  40b552:	8b 85 14 fe ff ff    	mov    -0x1ec(%rbp),%eax
+  40b558:	01 c2                	add    %eax,%edx
+  40b55a:	8b 85 d0 fd ff ff    	mov    -0x230(%rbp),%eax
+  40b560:	48 98                	cltq   
+  40b562:	48 c1 e0 04          	shl    $0x4,%rax
+  40b566:	48 01 e8             	add    %rbp,%rax
+  40b569:	48 2d 68 01 00 00    	sub    $0x168,%rax
+  40b56f:	89 10                	mov    %edx,(%rax)
+        Dx[k][3] = dy2*sum_cols + dx2;
+  40b571:	8b 85 18 fe ff ff    	mov    -0x1e8(%rbp),%eax
+  40b577:	0f af 85 c8 fd ff ff 	imul   -0x238(%rbp),%eax
+  40b57e:	89 c2                	mov    %eax,%edx
+  40b580:	8b 85 14 fe ff ff    	mov    -0x1ec(%rbp),%eax
+  40b586:	01 c2                	add    %eax,%edx
+  40b588:	8b 85 d0 fd ff ff    	mov    -0x230(%rbp),%eax
+  40b58e:	48 98                	cltq   
+  40b590:	48 c1 e0 04          	shl    $0x4,%rax
+  40b594:	48 01 e8             	add    %rbp,%rax
+  40b597:	48 2d 64 01 00 00    	sub    $0x164,%rax
+  40b59d:	89 10                	mov    %edx,(%rax)
+        Dx_float[k] = dx_s[k][4]/((float)(dx2-dx1)*(dy2-dy1));
+  40b59f:	8b 85 d0 fd ff ff    	mov    -0x230(%rbp),%eax
+  40b5a5:	48 63 d0             	movslq %eax,%rdx
+  40b5a8:	48 89 d0             	mov    %rdx,%rax
+  40b5ab:	48 c1 e0 02          	shl    $0x2,%rax
+  40b5af:	48 01 d0             	add    %rdx,%rax
+  40b5b2:	48 c1 e0 02          	shl    $0x2,%rax
+  40b5b6:	48 01 e8             	add    %rbp,%rax
+  40b5b9:	48 2d 00 01 00 00    	sub    $0x100,%rax
+  40b5bf:	8b 00                	mov    (%rax),%eax
+  40b5c1:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40b5c5:	8b 85 0c fe ff ff    	mov    -0x1f4(%rbp),%eax
+  40b5cb:	8b 95 14 fe ff ff    	mov    -0x1ec(%rbp),%edx
+  40b5d1:	29 c2                	sub    %eax,%edx
+  40b5d3:	89 d0                	mov    %edx,%eax
+  40b5d5:	f3 0f 2a d0          	cvtsi2ss %eax,%xmm2
+  40b5d9:	8b 85 10 fe ff ff    	mov    -0x1f0(%rbp),%eax
+  40b5df:	8b 95 18 fe ff ff    	mov    -0x1e8(%rbp),%edx
+  40b5e5:	29 c2                	sub    %eax,%edx
+  40b5e7:	89 d0                	mov    %edx,%eax
+  40b5e9:	f3 0f 2a c8          	cvtsi2ss %eax,%xmm1
+  40b5ed:	f3 0f 59 ca          	mulss  %xmm2,%xmm1
+  40b5f1:	f3 0f 5e c1          	divss  %xmm1,%xmm0
+  40b5f5:	8b 85 d0 fd ff ff    	mov    -0x230(%rbp),%eax
+  40b5fb:	48 98                	cltq   
+  40b5fd:	f3 0f 11 84 85 60 fe 	movss  %xmm0,-0x1a0(%rbp,%rax,4)
+  40b604:	ff ff 
+    Dxy_float[2] = 0;
+    Dxy_float[3] = 0;
+
+    //resizeHaarPattern( dx_s , Dx , NX , 9, size, sum_cols );    
+    float ratio = (float)size/9;
+    for( int k = 0; k < NX; k++ )
+  40b606:	83 85 d0 fd ff ff 01 	addl   $0x1,-0x230(%rbp)
+  40b60d:	83 bd d0 fd ff ff 02 	cmpl   $0x2,-0x230(%rbp)
+  40b614:	0f 8e 21 fb ff ff    	jle    40b13b <_ZL20calcLayerDetAndTraceiiPKhiiiPfiS1_i+0x417>
+        Dx[k][3] = dy2*sum_cols + dx2;
+        Dx_float[k] = dx_s[k][4]/((float)(dx2-dx1)*(dy2-dy1));
+    }
+
+    //resizeHaarPattern( dy_s , Dy , NY , 9, size, sum_cols );
+    ratio = (float)size/9;
+  40b61a:	f3 0f 2a 85 b8 fd ff 	cvtsi2ssl -0x248(%rbp),%xmm0
+  40b621:	ff 
+  40b622:	f3 0f 10 0d ce e9 4d 	movss  0x4de9ce(%rip),%xmm1        # 8e9ff8 <_ZZL18__gthread_active_pvE20__gthread_active_ptr+0x28>
+  40b629:	00 
+  40b62a:	f3 0f 5e c1          	divss  %xmm1,%xmm0
+  40b62e:	f3 0f 11 85 08 fe ff 	movss  %xmm0,-0x1f8(%rbp)
+  40b635:	ff 
+    for( int k = 0; k < NY; k++ )
+  40b636:	c7 85 d4 fd ff ff 00 	movl   $0x0,-0x22c(%rbp)
+  40b63d:	00 00 00 
+  40b640:	e9 d2 04 00 00       	jmpq   40bb17 <_ZL20calcLayerDetAndTraceiiPKhiiiPfiS1_i+0xdf3>
+    {
+        int dx1 = My_Round( ratio*dy_s[k][0] );
+  40b645:	8b 85 d4 fd ff ff    	mov    -0x22c(%rbp),%eax
+  40b64b:	48 63 d0             	movslq %eax,%rdx
+  40b64e:	48 89 d0             	mov    %rdx,%rax
+  40b651:	48 c1 e0 02          	shl    $0x2,%rax
+  40b655:	48 01 d0             	add    %rdx,%rax
+  40b658:	48 c1 e0 02          	shl    $0x2,%rax
+  40b65c:	48 01 e8             	add    %rbp,%rax
+  40b65f:	48 2d d0 00 00 00    	sub    $0xd0,%rax
+  40b665:	8b 00                	mov    (%rax),%eax
+  40b667:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40b66b:	f3 0f 59 85 08 fe ff 	mulss  -0x1f8(%rbp),%xmm0
+  40b672:	ff 
+  40b673:	0f 14 c0             	unpcklps %xmm0,%xmm0
+  40b676:	0f 5a c0             	cvtps2pd %xmm0,%xmm0
+  40b679:	8b 85 d4 fd ff ff    	mov    -0x22c(%rbp),%eax
+  40b67f:	48 63 d0             	movslq %eax,%rdx
+  40b682:	48 89 d0             	mov    %rdx,%rax
+  40b685:	48 c1 e0 02          	shl    $0x2,%rax
+  40b689:	48 01 d0             	add    %rdx,%rax
+  40b68c:	48 c1 e0 02          	shl    $0x2,%rax
+  40b690:	48 01 e8             	add    %rbp,%rax
+  40b693:	48 2d d0 00 00 00    	sub    $0xd0,%rax
+  40b699:	8b 00                	mov    (%rax),%eax
+  40b69b:	f3 0f 2a c8          	cvtsi2ss %eax,%xmm1
+  40b69f:	f3 0f 59 8d 08 fe ff 	mulss  -0x1f8(%rbp),%xmm1
+  40b6a6:	ff 
+  40b6a7:	f3 0f 2c c1          	cvttss2si %xmm1,%eax
+  40b6ab:	f2 0f 2a c8          	cvtsi2sd %eax,%xmm1
+  40b6af:	f2 0f 10 15 49 e9 4d 	movsd  0x4de949(%rip),%xmm2        # 8ea000 <_ZZL18__gthread_active_pvE20__gthread_active_ptr+0x30>
+  40b6b6:	00 
+  40b6b7:	f2 0f 58 ca          	addsd  %xmm2,%xmm1
+  40b6bb:	66 0f 2e c1          	ucomisd %xmm1,%xmm0
+  40b6bf:	72 37                	jb     40b6f8 <_ZL20calcLayerDetAndTraceiiPKhiiiPfiS1_i+0x9d4>
+  40b6c1:	8b 85 d4 fd ff ff    	mov    -0x22c(%rbp),%eax
+  40b6c7:	48 63 d0             	movslq %eax,%rdx
+  40b6ca:	48 89 d0             	mov    %rdx,%rax
+  40b6cd:	48 c1 e0 02          	shl    $0x2,%rax
+  40b6d1:	48 01 d0             	add    %rdx,%rax
+  40b6d4:	48 c1 e0 02          	shl    $0x2,%rax
+  40b6d8:	48 01 e8             	add    %rbp,%rax
+  40b6db:	48 2d d0 00 00 00    	sub    $0xd0,%rax
+  40b6e1:	8b 00                	mov    (%rax),%eax
+  40b6e3:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40b6e7:	f3 0f 59 85 08 fe ff 	mulss  -0x1f8(%rbp),%xmm0
+  40b6ee:	ff 
+  40b6ef:	f3 0f 2c c0          	cvttss2si %xmm0,%eax
+  40b6f3:	83 c0 01             	add    $0x1,%eax
+  40b6f6:	eb 32                	jmp    40b72a <_ZL20calcLayerDetAndTraceiiPKhiiiPfiS1_i+0xa06>
+  40b6f8:	8b 85 d4 fd ff ff    	mov    -0x22c(%rbp),%eax
+  40b6fe:	48 63 d0             	movslq %eax,%rdx
+  40b701:	48 89 d0             	mov    %rdx,%rax
+  40b704:	48 c1 e0 02          	shl    $0x2,%rax
+  40b708:	48 01 d0             	add    %rdx,%rax
+  40b70b:	48 c1 e0 02          	shl    $0x2,%rax
+  40b70f:	48 01 e8             	add    %rbp,%rax
+  40b712:	48 2d d0 00 00 00    	sub    $0xd0,%rax
+  40b718:	8b 00                	mov    (%rax),%eax
+  40b71a:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40b71e:	f3 0f 59 85 08 fe ff 	mulss  -0x1f8(%rbp),%xmm0
+  40b725:	ff 
+  40b726:	f3 0f 2c c0          	cvttss2si %xmm0,%eax
+  40b72a:	89 85 1c fe ff ff    	mov    %eax,-0x1e4(%rbp)
+        int dy1 = My_Round( ratio*dy_s[k][1] );
+  40b730:	8b 85 d4 fd ff ff    	mov    -0x22c(%rbp),%eax
+  40b736:	48 63 d0             	movslq %eax,%rdx
+  40b739:	48 89 d0             	mov    %rdx,%rax
+  40b73c:	48 c1 e0 02          	shl    $0x2,%rax
+  40b740:	48 01 d0             	add    %rdx,%rax
+  40b743:	48 c1 e0 02          	shl    $0x2,%rax
+  40b747:	48 01 e8             	add    %rbp,%rax
+  40b74a:	48 2d cc 00 00 00    	sub    $0xcc,%rax
+  40b750:	8b 00                	mov    (%rax),%eax
+  40b752:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40b756:	f3 0f 59 85 08 fe ff 	mulss  -0x1f8(%rbp),%xmm0
+  40b75d:	ff 
+  40b75e:	0f 14 c0             	unpcklps %xmm0,%xmm0
+  40b761:	0f 5a c0             	cvtps2pd %xmm0,%xmm0
+  40b764:	8b 85 d4 fd ff ff    	mov    -0x22c(%rbp),%eax
+  40b76a:	48 63 d0             	movslq %eax,%rdx
+  40b76d:	48 89 d0             	mov    %rdx,%rax
+  40b770:	48 c1 e0 02          	shl    $0x2,%rax
+  40b774:	48 01 d0             	add    %rdx,%rax
+  40b777:	48 c1 e0 02          	shl    $0x2,%rax
+  40b77b:	48 01 e8             	add    %rbp,%rax
+  40b77e:	48 2d cc 00 00 00    	sub    $0xcc,%rax
+  40b784:	8b 00                	mov    (%rax),%eax
+  40b786:	f3 0f 2a c8          	cvtsi2ss %eax,%xmm1
+  40b78a:	f3 0f 59 8d 08 fe ff 	mulss  -0x1f8(%rbp),%xmm1
+  40b791:	ff 
+  40b792:	f3 0f 2c c1          	cvttss2si %xmm1,%eax
+  40b796:	f2 0f 2a c8          	cvtsi2sd %eax,%xmm1
+  40b79a:	f2 0f 10 15 5e e8 4d 	movsd  0x4de85e(%rip),%xmm2        # 8ea000 <_ZZL18__gthread_active_pvE20__gthread_active_ptr+0x30>
+  40b7a1:	00 
+  40b7a2:	f2 0f 58 ca          	addsd  %xmm2,%xmm1
+  40b7a6:	66 0f 2e c1          	ucomisd %xmm1,%xmm0
+  40b7aa:	72 37                	jb     40b7e3 <_ZL20calcLayerDetAndTraceiiPKhiiiPfiS1_i+0xabf>
+  40b7ac:	8b 85 d4 fd ff ff    	mov    -0x22c(%rbp),%eax
+  40b7b2:	48 63 d0             	movslq %eax,%rdx
+  40b7b5:	48 89 d0             	mov    %rdx,%rax
+  40b7b8:	48 c1 e0 02          	shl    $0x2,%rax
+  40b7bc:	48 01 d0             	add    %rdx,%rax
+  40b7bf:	48 c1 e0 02          	shl    $0x2,%rax
+  40b7c3:	48 01 e8             	add    %rbp,%rax
+  40b7c6:	48 2d cc 00 00 00    	sub    $0xcc,%rax
+  40b7cc:	8b 00                	mov    (%rax),%eax
+  40b7ce:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40b7d2:	f3 0f 59 85 08 fe ff 	mulss  -0x1f8(%rbp),%xmm0
+  40b7d9:	ff 
+  40b7da:	f3 0f 2c c0          	cvttss2si %xmm0,%eax
+  40b7de:	83 c0 01             	add    $0x1,%eax
+  40b7e1:	eb 32                	jmp    40b815 <_ZL20calcLayerDetAndTraceiiPKhiiiPfiS1_i+0xaf1>
+  40b7e3:	8b 85 d4 fd ff ff    	mov    -0x22c(%rbp),%eax
+  40b7e9:	48 63 d0             	movslq %eax,%rdx
+  40b7ec:	48 89 d0             	mov    %rdx,%rax
+  40b7ef:	48 c1 e0 02          	shl    $0x2,%rax
+  40b7f3:	48 01 d0             	add    %rdx,%rax
+  40b7f6:	48 c1 e0 02          	shl    $0x2,%rax
+  40b7fa:	48 01 e8             	add    %rbp,%rax
+  40b7fd:	48 2d cc 00 00 00    	sub    $0xcc,%rax
+  40b803:	8b 00                	mov    (%rax),%eax
+  40b805:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40b809:	f3 0f 59 85 08 fe ff 	mulss  -0x1f8(%rbp),%xmm0
+  40b810:	ff 
+  40b811:	f3 0f 2c c0          	cvttss2si %xmm0,%eax
+  40b815:	89 85 20 fe ff ff    	mov    %eax,-0x1e0(%rbp)
+        int dx2 = My_Round( ratio*dy_s[k][2] );
+  40b81b:	8b 85 d4 fd ff ff    	mov    -0x22c(%rbp),%eax
+  40b821:	48 63 d0             	movslq %eax,%rdx
+  40b824:	48 89 d0             	mov    %rdx,%rax
+  40b827:	48 c1 e0 02          	shl    $0x2,%rax
+  40b82b:	48 01 d0             	add    %rdx,%rax
+  40b82e:	48 c1 e0 02          	shl    $0x2,%rax
+  40b832:	48 01 e8             	add    %rbp,%rax
+  40b835:	48 2d c8 00 00 00    	sub    $0xc8,%rax
+  40b83b:	8b 00                	mov    (%rax),%eax
+  40b83d:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40b841:	f3 0f 59 85 08 fe ff 	mulss  -0x1f8(%rbp),%xmm0
+  40b848:	ff 
+  40b849:	0f 14 c0             	unpcklps %xmm0,%xmm0
+  40b84c:	0f 5a c0             	cvtps2pd %xmm0,%xmm0
+  40b84f:	8b 85 d4 fd ff ff    	mov    -0x22c(%rbp),%eax
+  40b855:	48 63 d0             	movslq %eax,%rdx
+  40b858:	48 89 d0             	mov    %rdx,%rax
+  40b85b:	48 c1 e0 02          	shl    $0x2,%rax
+  40b85f:	48 01 d0             	add    %rdx,%rax
+  40b862:	48 c1 e0 02          	shl    $0x2,%rax
+  40b866:	48 01 e8             	add    %rbp,%rax
+  40b869:	48 2d c8 00 00 00    	sub    $0xc8,%rax
+  40b86f:	8b 00                	mov    (%rax),%eax
+  40b871:	f3 0f 2a c8          	cvtsi2ss %eax,%xmm1
+  40b875:	f3 0f 59 8d 08 fe ff 	mulss  -0x1f8(%rbp),%xmm1
+  40b87c:	ff 
+  40b87d:	f3 0f 2c c1          	cvttss2si %xmm1,%eax
+  40b881:	f2 0f 2a c8          	cvtsi2sd %eax,%xmm1
+  40b885:	f2 0f 10 15 73 e7 4d 	movsd  0x4de773(%rip),%xmm2        # 8ea000 <_ZZL18__gthread_active_pvE20__gthread_active_ptr+0x30>
+  40b88c:	00 
+  40b88d:	f2 0f 58 ca          	addsd  %xmm2,%xmm1
+  40b891:	66 0f 2e c1          	ucomisd %xmm1,%xmm0
+  40b895:	72 37                	jb     40b8ce <_ZL20calcLayerDetAndTraceiiPKhiiiPfiS1_i+0xbaa>
+  40b897:	8b 85 d4 fd ff ff    	mov    -0x22c(%rbp),%eax
+  40b89d:	48 63 d0             	movslq %eax,%rdx
+  40b8a0:	48 89 d0             	mov    %rdx,%rax
+  40b8a3:	48 c1 e0 02          	shl    $0x2,%rax
+  40b8a7:	48 01 d0             	add    %rdx,%rax
+  40b8aa:	48 c1 e0 02          	shl    $0x2,%rax
+  40b8ae:	48 01 e8             	add    %rbp,%rax
+  40b8b1:	48 2d c8 00 00 00    	sub    $0xc8,%rax
+  40b8b7:	8b 00                	mov    (%rax),%eax
+  40b8b9:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40b8bd:	f3 0f 59 85 08 fe ff 	mulss  -0x1f8(%rbp),%xmm0
+  40b8c4:	ff 
+  40b8c5:	f3 0f 2c c0          	cvttss2si %xmm0,%eax
+  40b8c9:	83 c0 01             	add    $0x1,%eax
+  40b8cc:	eb 32                	jmp    40b900 <_ZL20calcLayerDetAndTraceiiPKhiiiPfiS1_i+0xbdc>
+  40b8ce:	8b 85 d4 fd ff ff    	mov    -0x22c(%rbp),%eax
+  40b8d4:	48 63 d0             	movslq %eax,%rdx
+  40b8d7:	48 89 d0             	mov    %rdx,%rax
+  40b8da:	48 c1 e0 02          	shl    $0x2,%rax
+  40b8de:	48 01 d0             	add    %rdx,%rax
+  40b8e1:	48 c1 e0 02          	shl    $0x2,%rax
+  40b8e5:	48 01 e8             	add    %rbp,%rax
+  40b8e8:	48 2d c8 00 00 00    	sub    $0xc8,%rax
+  40b8ee:	8b 00                	mov    (%rax),%eax
+  40b8f0:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40b8f4:	f3 0f 59 85 08 fe ff 	mulss  -0x1f8(%rbp),%xmm0
+  40b8fb:	ff 
+  40b8fc:	f3 0f 2c c0          	cvttss2si %xmm0,%eax
+  40b900:	89 85 24 fe ff ff    	mov    %eax,-0x1dc(%rbp)
+        int dy2 = My_Round( ratio*dy_s[k][3] );
+  40b906:	8b 85 d4 fd ff ff    	mov    -0x22c(%rbp),%eax
+  40b90c:	48 63 d0             	movslq %eax,%rdx
+  40b90f:	48 89 d0             	mov    %rdx,%rax
+  40b912:	48 c1 e0 02          	shl    $0x2,%rax
+  40b916:	48 01 d0             	add    %rdx,%rax
+  40b919:	48 c1 e0 02          	shl    $0x2,%rax
+  40b91d:	48 01 e8             	add    %rbp,%rax
+  40b920:	48 2d c4 00 00 00    	sub    $0xc4,%rax
+  40b926:	8b 00                	mov    (%rax),%eax
+  40b928:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40b92c:	f3 0f 59 85 08 fe ff 	mulss  -0x1f8(%rbp),%xmm0
+  40b933:	ff 
+  40b934:	0f 14 c0             	unpcklps %xmm0,%xmm0
+  40b937:	0f 5a c0             	cvtps2pd %xmm0,%xmm0
+  40b93a:	8b 85 d4 fd ff ff    	mov    -0x22c(%rbp),%eax
+  40b940:	48 63 d0             	movslq %eax,%rdx
+  40b943:	48 89 d0             	mov    %rdx,%rax
+  40b946:	48 c1 e0 02          	shl    $0x2,%rax
+  40b94a:	48 01 d0             	add    %rdx,%rax
+  40b94d:	48 c1 e0 02          	shl    $0x2,%rax
+  40b951:	48 01 e8             	add    %rbp,%rax
+  40b954:	48 2d c4 00 00 00    	sub    $0xc4,%rax
+  40b95a:	8b 00                	mov    (%rax),%eax
+  40b95c:	f3 0f 2a c8          	cvtsi2ss %eax,%xmm1
+  40b960:	f3 0f 59 8d 08 fe ff 	mulss  -0x1f8(%rbp),%xmm1
+  40b967:	ff 
+  40b968:	f3 0f 2c c1          	cvttss2si %xmm1,%eax
+  40b96c:	f2 0f 2a c8          	cvtsi2sd %eax,%xmm1
+  40b970:	f2 0f 10 15 88 e6 4d 	movsd  0x4de688(%rip),%xmm2        # 8ea000 <_ZZL18__gthread_active_pvE20__gthread_active_ptr+0x30>
+  40b977:	00 
+  40b978:	f2 0f 58 ca          	addsd  %xmm2,%xmm1
+  40b97c:	66 0f 2e c1          	ucomisd %xmm1,%xmm0
+  40b980:	72 37                	jb     40b9b9 <_ZL20calcLayerDetAndTraceiiPKhiiiPfiS1_i+0xc95>
+  40b982:	8b 85 d4 fd ff ff    	mov    -0x22c(%rbp),%eax
+  40b988:	48 63 d0             	movslq %eax,%rdx
+  40b98b:	48 89 d0             	mov    %rdx,%rax
+  40b98e:	48 c1 e0 02          	shl    $0x2,%rax
+  40b992:	48 01 d0             	add    %rdx,%rax
+  40b995:	48 c1 e0 02          	shl    $0x2,%rax
+  40b999:	48 01 e8             	add    %rbp,%rax
+  40b99c:	48 2d c4 00 00 00    	sub    $0xc4,%rax
+  40b9a2:	8b 00                	mov    (%rax),%eax
+  40b9a4:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40b9a8:	f3 0f 59 85 08 fe ff 	mulss  -0x1f8(%rbp),%xmm0
+  40b9af:	ff 
+  40b9b0:	f3 0f 2c c0          	cvttss2si %xmm0,%eax
+  40b9b4:	83 c0 01             	add    $0x1,%eax
+  40b9b7:	eb 32                	jmp    40b9eb <_ZL20calcLayerDetAndTraceiiPKhiiiPfiS1_i+0xcc7>
+  40b9b9:	8b 85 d4 fd ff ff    	mov    -0x22c(%rbp),%eax
+  40b9bf:	48 63 d0             	movslq %eax,%rdx
+  40b9c2:	48 89 d0             	mov    %rdx,%rax
+  40b9c5:	48 c1 e0 02          	shl    $0x2,%rax
+  40b9c9:	48 01 d0             	add    %rdx,%rax
+  40b9cc:	48 c1 e0 02          	shl    $0x2,%rax
+  40b9d0:	48 01 e8             	add    %rbp,%rax
+  40b9d3:	48 2d c4 00 00 00    	sub    $0xc4,%rax
+  40b9d9:	8b 00                	mov    (%rax),%eax
+  40b9db:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40b9df:	f3 0f 59 85 08 fe ff 	mulss  -0x1f8(%rbp),%xmm0
+  40b9e6:	ff 
+  40b9e7:	f3 0f 2c c0          	cvttss2si %xmm0,%eax
+  40b9eb:	89 85 28 fe ff ff    	mov    %eax,-0x1d8(%rbp)
+        Dy[k][0] = dy1*sum_cols + dx1;
+  40b9f1:	8b 85 20 fe ff ff    	mov    -0x1e0(%rbp),%eax
+  40b9f7:	0f af 85 c8 fd ff ff 	imul   -0x238(%rbp),%eax
+  40b9fe:	89 c2                	mov    %eax,%edx
+  40ba00:	8b 85 1c fe ff ff    	mov    -0x1e4(%rbp),%eax
+  40ba06:	01 c2                	add    %eax,%edx
+  40ba08:	8b 85 d4 fd ff ff    	mov    -0x22c(%rbp),%eax
+  40ba0e:	48 98                	cltq   
+  40ba10:	48 c1 e0 04          	shl    $0x4,%rax
+  40ba14:	48 01 e8             	add    %rbp,%rax
+  40ba17:	48 2d 40 01 00 00    	sub    $0x140,%rax
+  40ba1d:	89 10                	mov    %edx,(%rax)
+        Dy[k][1] = dy2*sum_cols + dx1;
+  40ba1f:	8b 85 28 fe ff ff    	mov    -0x1d8(%rbp),%eax
+  40ba25:	0f af 85 c8 fd ff ff 	imul   -0x238(%rbp),%eax
+  40ba2c:	89 c2                	mov    %eax,%edx
+  40ba2e:	8b 85 1c fe ff ff    	mov    -0x1e4(%rbp),%eax
+  40ba34:	01 c2                	add    %eax,%edx
+  40ba36:	8b 85 d4 fd ff ff    	mov    -0x22c(%rbp),%eax
+  40ba3c:	48 98                	cltq   
+  40ba3e:	48 c1 e0 04          	shl    $0x4,%rax
+  40ba42:	48 01 e8             	add    %rbp,%rax
+  40ba45:	48 2d 3c 01 00 00    	sub    $0x13c,%rax
+  40ba4b:	89 10                	mov    %edx,(%rax)
+        Dy[k][2] = dy1*sum_cols + dx2;
+  40ba4d:	8b 85 20 fe ff ff    	mov    -0x1e0(%rbp),%eax
+  40ba53:	0f af 85 c8 fd ff ff 	imul   -0x238(%rbp),%eax
+  40ba5a:	89 c2                	mov    %eax,%edx
+  40ba5c:	8b 85 24 fe ff ff    	mov    -0x1dc(%rbp),%eax
+  40ba62:	01 c2                	add    %eax,%edx
+  40ba64:	8b 85 d4 fd ff ff    	mov    -0x22c(%rbp),%eax
+  40ba6a:	48 98                	cltq   
+  40ba6c:	48 c1 e0 04          	shl    $0x4,%rax
+  40ba70:	48 01 e8             	add    %rbp,%rax
+  40ba73:	48 2d 38 01 00 00    	sub    $0x138,%rax
+  40ba79:	89 10                	mov    %edx,(%rax)
+        Dy[k][3] = dy2*sum_cols + dx2;
+  40ba7b:	8b 85 28 fe ff ff    	mov    -0x1d8(%rbp),%eax
+  40ba81:	0f af 85 c8 fd ff ff 	imul   -0x238(%rbp),%eax
+  40ba88:	89 c2                	mov    %eax,%edx
+  40ba8a:	8b 85 24 fe ff ff    	mov    -0x1dc(%rbp),%eax
+  40ba90:	01 c2                	add    %eax,%edx
+  40ba92:	8b 85 d4 fd ff ff    	mov    -0x22c(%rbp),%eax
+  40ba98:	48 98                	cltq   
+  40ba9a:	48 c1 e0 04          	shl    $0x4,%rax
+  40ba9e:	48 01 e8             	add    %rbp,%rax
+  40baa1:	48 2d 34 01 00 00    	sub    $0x134,%rax
+  40baa7:	89 10                	mov    %edx,(%rax)
+        Dy_float[k] = dy_s[k][4]/((float)(dx2-dx1)*(dy2-dy1));
+  40baa9:	8b 85 d4 fd ff ff    	mov    -0x22c(%rbp),%eax
+  40baaf:	48 63 d0             	movslq %eax,%rdx
+  40bab2:	48 89 d0             	mov    %rdx,%rax
+  40bab5:	48 c1 e0 02          	shl    $0x2,%rax
+  40bab9:	48 01 d0             	add    %rdx,%rax
+  40babc:	48 c1 e0 02          	shl    $0x2,%rax
+  40bac0:	48 01 e8             	add    %rbp,%rax
+  40bac3:	48 2d c0 00 00 00    	sub    $0xc0,%rax
+  40bac9:	8b 00                	mov    (%rax),%eax
+  40bacb:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40bacf:	8b 85 1c fe ff ff    	mov    -0x1e4(%rbp),%eax
+  40bad5:	8b 95 24 fe ff ff    	mov    -0x1dc(%rbp),%edx
+  40badb:	29 c2                	sub    %eax,%edx
+  40badd:	89 d0                	mov    %edx,%eax
+  40badf:	f3 0f 2a d0          	cvtsi2ss %eax,%xmm2
+  40bae3:	8b 85 20 fe ff ff    	mov    -0x1e0(%rbp),%eax
+  40bae9:	8b 95 28 fe ff ff    	mov    -0x1d8(%rbp),%edx
+  40baef:	29 c2                	sub    %eax,%edx
+  40baf1:	89 d0                	mov    %edx,%eax
+  40baf3:	f3 0f 2a c8          	cvtsi2ss %eax,%xmm1
+  40baf7:	f3 0f 59 ca          	mulss  %xmm2,%xmm1
+  40bafb:	f3 0f 5e c1          	divss  %xmm1,%xmm0
+  40baff:	8b 85 d4 fd ff ff    	mov    -0x22c(%rbp),%eax
+  40bb05:	48 98                	cltq   
+  40bb07:	f3 0f 11 84 85 70 fe 	movss  %xmm0,-0x190(%rbp,%rax,4)
+  40bb0e:	ff ff 
+        Dx_float[k] = dx_s[k][4]/((float)(dx2-dx1)*(dy2-dy1));
+    }
+
+    //resizeHaarPattern( dy_s , Dy , NY , 9, size, sum_cols );
+    ratio = (float)size/9;
+    for( int k = 0; k < NY; k++ )
+  40bb10:	83 85 d4 fd ff ff 01 	addl   $0x1,-0x22c(%rbp)
+  40bb17:	83 bd d4 fd ff ff 02 	cmpl   $0x2,-0x22c(%rbp)
+  40bb1e:	0f 8e 21 fb ff ff    	jle    40b645 <_ZL20calcLayerDetAndTraceiiPKhiiiPfiS1_i+0x921>
+        Dy[k][2] = dy1*sum_cols + dx2;
+        Dy[k][3] = dy2*sum_cols + dx2;
+        Dy_float[k] = dy_s[k][4]/((float)(dx2-dx1)*(dy2-dy1));
+    }
+    //resizeHaarPattern( dxy_s, Dxy, NXY, 9, size, sum_cols );    
+    ratio = (float)size/9;
+  40bb24:	f3 0f 2a 85 b8 fd ff 	cvtsi2ssl -0x248(%rbp),%xmm0
+  40bb2b:	ff 
+  40bb2c:	f3 0f 10 0d c4 e4 4d 	movss  0x4de4c4(%rip),%xmm1        # 8e9ff8 <_ZZL18__gthread_active_pvE20__gthread_active_ptr+0x28>
+  40bb33:	00 
+  40bb34:	f3 0f 5e c1          	divss  %xmm1,%xmm0
+  40bb38:	f3 0f 11 85 08 fe ff 	movss  %xmm0,-0x1f8(%rbp)
+  40bb3f:	ff 
+    for( int k = 0; k < NXY; k++ )
+  40bb40:	c7 85 d8 fd ff ff 00 	movl   $0x0,-0x228(%rbp)
+  40bb47:	00 00 00 
+  40bb4a:	e9 b0 04 00 00       	jmpq   40bfff <_ZL20calcLayerDetAndTraceiiPKhiiiPfiS1_i+0x12db>
+    {
+        int dx1 = My_Round( ratio*dxy_s[k][0] );
+  40bb4f:	8b 85 d8 fd ff ff    	mov    -0x228(%rbp),%eax
+  40bb55:	48 63 d0             	movslq %eax,%rdx
+  40bb58:	48 89 d0             	mov    %rdx,%rax
+  40bb5b:	48 c1 e0 02          	shl    $0x2,%rax
+  40bb5f:	48 01 d0             	add    %rdx,%rax
+  40bb62:	48 c1 e0 02          	shl    $0x2,%rax
+  40bb66:	48 01 e8             	add    %rbp,%rax
+  40bb69:	48 83 e8 50          	sub    $0x50,%rax
+  40bb6d:	8b 00                	mov    (%rax),%eax
+  40bb6f:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40bb73:	f3 0f 59 85 08 fe ff 	mulss  -0x1f8(%rbp),%xmm0
+  40bb7a:	ff 
+  40bb7b:	0f 14 c0             	unpcklps %xmm0,%xmm0
+  40bb7e:	0f 5a c0             	cvtps2pd %xmm0,%xmm0
+  40bb81:	8b 85 d8 fd ff ff    	mov    -0x228(%rbp),%eax
+  40bb87:	48 63 d0             	movslq %eax,%rdx
+  40bb8a:	48 89 d0             	mov    %rdx,%rax
+  40bb8d:	48 c1 e0 02          	shl    $0x2,%rax
+  40bb91:	48 01 d0             	add    %rdx,%rax
+  40bb94:	48 c1 e0 02          	shl    $0x2,%rax
+  40bb98:	48 01 e8             	add    %rbp,%rax
+  40bb9b:	48 83 e8 50          	sub    $0x50,%rax
+  40bb9f:	8b 00                	mov    (%rax),%eax
+  40bba1:	f3 0f 2a c8          	cvtsi2ss %eax,%xmm1
+  40bba5:	f3 0f 59 8d 08 fe ff 	mulss  -0x1f8(%rbp),%xmm1
+  40bbac:	ff 
+  40bbad:	f3 0f 2c c1          	cvttss2si %xmm1,%eax
+  40bbb1:	f2 0f 2a c8          	cvtsi2sd %eax,%xmm1
+  40bbb5:	f2 0f 10 15 43 e4 4d 	movsd  0x4de443(%rip),%xmm2        # 8ea000 <_ZZL18__gthread_active_pvE20__gthread_active_ptr+0x30>
+  40bbbc:	00 
+  40bbbd:	f2 0f 58 ca          	addsd  %xmm2,%xmm1
+  40bbc1:	66 0f 2e c1          	ucomisd %xmm1,%xmm0
+  40bbc5:	72 35                	jb     40bbfc <_ZL20calcLayerDetAndTraceiiPKhiiiPfiS1_i+0xed8>
+  40bbc7:	8b 85 d8 fd ff ff    	mov    -0x228(%rbp),%eax
+  40bbcd:	48 63 d0             	movslq %eax,%rdx
+  40bbd0:	48 89 d0             	mov    %rdx,%rax
+  40bbd3:	48 c1 e0 02          	shl    $0x2,%rax
+  40bbd7:	48 01 d0             	add    %rdx,%rax
+  40bbda:	48 c1 e0 02          	shl    $0x2,%rax
+  40bbde:	48 01 e8             	add    %rbp,%rax
+  40bbe1:	48 83 e8 50          	sub    $0x50,%rax
+  40bbe5:	8b 00                	mov    (%rax),%eax
+  40bbe7:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40bbeb:	f3 0f 59 85 08 fe ff 	mulss  -0x1f8(%rbp),%xmm0
+  40bbf2:	ff 
+  40bbf3:	f3 0f 2c c0          	cvttss2si %xmm0,%eax
+  40bbf7:	83 c0 01             	add    $0x1,%eax
+  40bbfa:	eb 30                	jmp    40bc2c <_ZL20calcLayerDetAndTraceiiPKhiiiPfiS1_i+0xf08>
+  40bbfc:	8b 85 d8 fd ff ff    	mov    -0x228(%rbp),%eax
+  40bc02:	48 63 d0             	movslq %eax,%rdx
+  40bc05:	48 89 d0             	mov    %rdx,%rax
+  40bc08:	48 c1 e0 02          	shl    $0x2,%rax
+  40bc0c:	48 01 d0             	add    %rdx,%rax
+  40bc0f:	48 c1 e0 02          	shl    $0x2,%rax
+  40bc13:	48 01 e8             	add    %rbp,%rax
+  40bc16:	48 83 e8 50          	sub    $0x50,%rax
+  40bc1a:	8b 00                	mov    (%rax),%eax
+  40bc1c:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40bc20:	f3 0f 59 85 08 fe ff 	mulss  -0x1f8(%rbp),%xmm0
+  40bc27:	ff 
+  40bc28:	f3 0f 2c c0          	cvttss2si %xmm0,%eax
+  40bc2c:	89 85 2c fe ff ff    	mov    %eax,-0x1d4(%rbp)
+        int dy1 = My_Round( ratio*dxy_s[k][1] );
+  40bc32:	8b 85 d8 fd ff ff    	mov    -0x228(%rbp),%eax
+  40bc38:	48 63 d0             	movslq %eax,%rdx
+  40bc3b:	48 89 d0             	mov    %rdx,%rax
+  40bc3e:	48 c1 e0 02          	shl    $0x2,%rax
+  40bc42:	48 01 d0             	add    %rdx,%rax
+  40bc45:	48 c1 e0 02          	shl    $0x2,%rax
+  40bc49:	48 01 e8             	add    %rbp,%rax
+  40bc4c:	48 83 e8 4c          	sub    $0x4c,%rax
+  40bc50:	8b 00                	mov    (%rax),%eax
+  40bc52:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40bc56:	f3 0f 59 85 08 fe ff 	mulss  -0x1f8(%rbp),%xmm0
+  40bc5d:	ff 
+  40bc5e:	0f 14 c0             	unpcklps %xmm0,%xmm0
+  40bc61:	0f 5a c0             	cvtps2pd %xmm0,%xmm0
+  40bc64:	8b 85 d8 fd ff ff    	mov    -0x228(%rbp),%eax
+  40bc6a:	48 63 d0             	movslq %eax,%rdx
+  40bc6d:	48 89 d0             	mov    %rdx,%rax
+  40bc70:	48 c1 e0 02          	shl    $0x2,%rax
+  40bc74:	48 01 d0             	add    %rdx,%rax
+  40bc77:	48 c1 e0 02          	shl    $0x2,%rax
+  40bc7b:	48 01 e8             	add    %rbp,%rax
+  40bc7e:	48 83 e8 4c          	sub    $0x4c,%rax
+  40bc82:	8b 00                	mov    (%rax),%eax
+  40bc84:	f3 0f 2a c8          	cvtsi2ss %eax,%xmm1
+  40bc88:	f3 0f 59 8d 08 fe ff 	mulss  -0x1f8(%rbp),%xmm1
+  40bc8f:	ff 
+  40bc90:	f3 0f 2c c1          	cvttss2si %xmm1,%eax
+  40bc94:	f2 0f 2a c8          	cvtsi2sd %eax,%xmm1
+  40bc98:	f2 0f 10 15 60 e3 4d 	movsd  0x4de360(%rip),%xmm2        # 8ea000 <_ZZL18__gthread_active_pvE20__gthread_active_ptr+0x30>
+  40bc9f:	00 
+  40bca0:	f2 0f 58 ca          	addsd  %xmm2,%xmm1
+  40bca4:	66 0f 2e c1          	ucomisd %xmm1,%xmm0
+  40bca8:	72 35                	jb     40bcdf <_ZL20calcLayerDetAndTraceiiPKhiiiPfiS1_i+0xfbb>
+  40bcaa:	8b 85 d8 fd ff ff    	mov    -0x228(%rbp),%eax
+  40bcb0:	48 63 d0             	movslq %eax,%rdx
+  40bcb3:	48 89 d0             	mov    %rdx,%rax
+  40bcb6:	48 c1 e0 02          	shl    $0x2,%rax
+  40bcba:	48 01 d0             	add    %rdx,%rax
+  40bcbd:	48 c1 e0 02          	shl    $0x2,%rax
+  40bcc1:	48 01 e8             	add    %rbp,%rax
+  40bcc4:	48 83 e8 4c          	sub    $0x4c,%rax
+  40bcc8:	8b 00                	mov    (%rax),%eax
+  40bcca:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40bcce:	f3 0f 59 85 08 fe ff 	mulss  -0x1f8(%rbp),%xmm0
+  40bcd5:	ff 
+  40bcd6:	f3 0f 2c c0          	cvttss2si %xmm0,%eax
+  40bcda:	83 c0 01             	add    $0x1,%eax
+  40bcdd:	eb 30                	jmp    40bd0f <_ZL20calcLayerDetAndTraceiiPKhiiiPfiS1_i+0xfeb>
+  40bcdf:	8b 85 d8 fd ff ff    	mov    -0x228(%rbp),%eax
+  40bce5:	48 63 d0             	movslq %eax,%rdx
+  40bce8:	48 89 d0             	mov    %rdx,%rax
+  40bceb:	48 c1 e0 02          	shl    $0x2,%rax
+  40bcef:	48 01 d0             	add    %rdx,%rax
+  40bcf2:	48 c1 e0 02          	shl    $0x2,%rax
+  40bcf6:	48 01 e8             	add    %rbp,%rax
+  40bcf9:	48 83 e8 4c          	sub    $0x4c,%rax
+  40bcfd:	8b 00                	mov    (%rax),%eax
+  40bcff:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40bd03:	f3 0f 59 85 08 fe ff 	mulss  -0x1f8(%rbp),%xmm0
+  40bd0a:	ff 
+  40bd0b:	f3 0f 2c c0          	cvttss2si %xmm0,%eax
+  40bd0f:	89 85 30 fe ff ff    	mov    %eax,-0x1d0(%rbp)
+        int dx2 = My_Round( ratio*dxy_s[k][2] );
+  40bd15:	8b 85 d8 fd ff ff    	mov    -0x228(%rbp),%eax
+  40bd1b:	48 63 d0             	movslq %eax,%rdx
+  40bd1e:	48 89 d0             	mov    %rdx,%rax
+  40bd21:	48 c1 e0 02          	shl    $0x2,%rax
+  40bd25:	48 01 d0             	add    %rdx,%rax
+  40bd28:	48 c1 e0 02          	shl    $0x2,%rax
+  40bd2c:	48 01 e8             	add    %rbp,%rax
+  40bd2f:	48 83 e8 48          	sub    $0x48,%rax
+  40bd33:	8b 00                	mov    (%rax),%eax
+  40bd35:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40bd39:	f3 0f 59 85 08 fe ff 	mulss  -0x1f8(%rbp),%xmm0
+  40bd40:	ff 
+  40bd41:	0f 14 c0             	unpcklps %xmm0,%xmm0
+  40bd44:	0f 5a c0             	cvtps2pd %xmm0,%xmm0
+  40bd47:	8b 85 d8 fd ff ff    	mov    -0x228(%rbp),%eax
+  40bd4d:	48 63 d0             	movslq %eax,%rdx
+  40bd50:	48 89 d0             	mov    %rdx,%rax
+  40bd53:	48 c1 e0 02          	shl    $0x2,%rax
+  40bd57:	48 01 d0             	add    %rdx,%rax
+  40bd5a:	48 c1 e0 02          	shl    $0x2,%rax
+  40bd5e:	48 01 e8             	add    %rbp,%rax
+  40bd61:	48 83 e8 48          	sub    $0x48,%rax
+  40bd65:	8b 00                	mov    (%rax),%eax
+  40bd67:	f3 0f 2a c8          	cvtsi2ss %eax,%xmm1
+  40bd6b:	f3 0f 59 8d 08 fe ff 	mulss  -0x1f8(%rbp),%xmm1
+  40bd72:	ff 
+  40bd73:	f3 0f 2c c1          	cvttss2si %xmm1,%eax
+  40bd77:	f2 0f 2a c8          	cvtsi2sd %eax,%xmm1
+  40bd7b:	f2 0f 10 15 7d e2 4d 	movsd  0x4de27d(%rip),%xmm2        # 8ea000 <_ZZL18__gthread_active_pvE20__gthread_active_ptr+0x30>
+  40bd82:	00 
+  40bd83:	f2 0f 58 ca          	addsd  %xmm2,%xmm1
+  40bd87:	66 0f 2e c1          	ucomisd %xmm1,%xmm0
+  40bd8b:	72 35                	jb     40bdc2 <_ZL20calcLayerDetAndTraceiiPKhiiiPfiS1_i+0x109e>
+  40bd8d:	8b 85 d8 fd ff ff    	mov    -0x228(%rbp),%eax
+  40bd93:	48 63 d0             	movslq %eax,%rdx
+  40bd96:	48 89 d0             	mov    %rdx,%rax
+  40bd99:	48 c1 e0 02          	shl    $0x2,%rax
+  40bd9d:	48 01 d0             	add    %rdx,%rax
+  40bda0:	48 c1 e0 02          	shl    $0x2,%rax
+  40bda4:	48 01 e8             	add    %rbp,%rax
+  40bda7:	48 83 e8 48          	sub    $0x48,%rax
+  40bdab:	8b 00                	mov    (%rax),%eax
+  40bdad:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40bdb1:	f3 0f 59 85 08 fe ff 	mulss  -0x1f8(%rbp),%xmm0
+  40bdb8:	ff 
+  40bdb9:	f3 0f 2c c0          	cvttss2si %xmm0,%eax
+  40bdbd:	83 c0 01             	add    $0x1,%eax
+  40bdc0:	eb 30                	jmp    40bdf2 <_ZL20calcLayerDetAndTraceiiPKhiiiPfiS1_i+0x10ce>
+  40bdc2:	8b 85 d8 fd ff ff    	mov    -0x228(%rbp),%eax
+  40bdc8:	48 63 d0             	movslq %eax,%rdx
+  40bdcb:	48 89 d0             	mov    %rdx,%rax
+  40bdce:	48 c1 e0 02          	shl    $0x2,%rax
+  40bdd2:	48 01 d0             	add    %rdx,%rax
+  40bdd5:	48 c1 e0 02          	shl    $0x2,%rax
+  40bdd9:	48 01 e8             	add    %rbp,%rax
+  40bddc:	48 83 e8 48          	sub    $0x48,%rax
+  40bde0:	8b 00                	mov    (%rax),%eax
+  40bde2:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40bde6:	f3 0f 59 85 08 fe ff 	mulss  -0x1f8(%rbp),%xmm0
+  40bded:	ff 
+  40bdee:	f3 0f 2c c0          	cvttss2si %xmm0,%eax
+  40bdf2:	89 85 34 fe ff ff    	mov    %eax,-0x1cc(%rbp)
+        int dy2 = My_Round( ratio*dxy_s[k][3] );
+  40bdf8:	8b 85 d8 fd ff ff    	mov    -0x228(%rbp),%eax
+  40bdfe:	48 63 d0             	movslq %eax,%rdx
+  40be01:	48 89 d0             	mov    %rdx,%rax
+  40be04:	48 c1 e0 02          	shl    $0x2,%rax
+  40be08:	48 01 d0             	add    %rdx,%rax
+  40be0b:	48 c1 e0 02          	shl    $0x2,%rax
+  40be0f:	48 01 e8             	add    %rbp,%rax
+  40be12:	48 83 e8 44          	sub    $0x44,%rax
+  40be16:	8b 00                	mov    (%rax),%eax
+  40be18:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40be1c:	f3 0f 59 85 08 fe ff 	mulss  -0x1f8(%rbp),%xmm0
+  40be23:	ff 
+  40be24:	0f 14 c0             	unpcklps %xmm0,%xmm0
+  40be27:	0f 5a c0             	cvtps2pd %xmm0,%xmm0
+  40be2a:	8b 85 d8 fd ff ff    	mov    -0x228(%rbp),%eax
+  40be30:	48 63 d0             	movslq %eax,%rdx
+  40be33:	48 89 d0             	mov    %rdx,%rax
+  40be36:	48 c1 e0 02          	shl    $0x2,%rax
+  40be3a:	48 01 d0             	add    %rdx,%rax
+  40be3d:	48 c1 e0 02          	shl    $0x2,%rax
+  40be41:	48 01 e8             	add    %rbp,%rax
+  40be44:	48 83 e8 44          	sub    $0x44,%rax
+  40be48:	8b 00                	mov    (%rax),%eax
+  40be4a:	f3 0f 2a c8          	cvtsi2ss %eax,%xmm1
+  40be4e:	f3 0f 59 8d 08 fe ff 	mulss  -0x1f8(%rbp),%xmm1
+  40be55:	ff 
+  40be56:	f3 0f 2c c1          	cvttss2si %xmm1,%eax
+  40be5a:	f2 0f 2a c8          	cvtsi2sd %eax,%xmm1
+  40be5e:	f2 0f 10 15 9a e1 4d 	movsd  0x4de19a(%rip),%xmm2        # 8ea000 <_ZZL18__gthread_active_pvE20__gthread_active_ptr+0x30>
+  40be65:	00 
+  40be66:	f2 0f 58 ca          	addsd  %xmm2,%xmm1
+  40be6a:	66 0f 2e c1          	ucomisd %xmm1,%xmm0
+  40be6e:	72 35                	jb     40bea5 <_ZL20calcLayerDetAndTraceiiPKhiiiPfiS1_i+0x1181>
+  40be70:	8b 85 d8 fd ff ff    	mov    -0x228(%rbp),%eax
+  40be76:	48 63 d0             	movslq %eax,%rdx
+  40be79:	48 89 d0             	mov    %rdx,%rax
+  40be7c:	48 c1 e0 02          	shl    $0x2,%rax
+  40be80:	48 01 d0             	add    %rdx,%rax
+  40be83:	48 c1 e0 02          	shl    $0x2,%rax
+  40be87:	48 01 e8             	add    %rbp,%rax
+  40be8a:	48 83 e8 44          	sub    $0x44,%rax
+  40be8e:	8b 00                	mov    (%rax),%eax
+  40be90:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40be94:	f3 0f 59 85 08 fe ff 	mulss  -0x1f8(%rbp),%xmm0
+  40be9b:	ff 
+  40be9c:	f3 0f 2c c0          	cvttss2si %xmm0,%eax
+  40bea0:	83 c0 01             	add    $0x1,%eax
+  40bea3:	eb 30                	jmp    40bed5 <_ZL20calcLayerDetAndTraceiiPKhiiiPfiS1_i+0x11b1>
+  40bea5:	8b 85 d8 fd ff ff    	mov    -0x228(%rbp),%eax
+  40beab:	48 63 d0             	movslq %eax,%rdx
+  40beae:	48 89 d0             	mov    %rdx,%rax
+  40beb1:	48 c1 e0 02          	shl    $0x2,%rax
+  40beb5:	48 01 d0             	add    %rdx,%rax
+  40beb8:	48 c1 e0 02          	shl    $0x2,%rax
+  40bebc:	48 01 e8             	add    %rbp,%rax
+  40bebf:	48 83 e8 44          	sub    $0x44,%rax
+  40bec3:	8b 00                	mov    (%rax),%eax
+  40bec5:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40bec9:	f3 0f 59 85 08 fe ff 	mulss  -0x1f8(%rbp),%xmm0
+  40bed0:	ff 
+  40bed1:	f3 0f 2c c0          	cvttss2si %xmm0,%eax
+  40bed5:	89 85 38 fe ff ff    	mov    %eax,-0x1c8(%rbp)
+        Dxy[k][0] = dy1*sum_cols + dx1;
+  40bedb:	8b 85 30 fe ff ff    	mov    -0x1d0(%rbp),%eax
+  40bee1:	0f af 85 c8 fd ff ff 	imul   -0x238(%rbp),%eax
+  40bee8:	89 c2                	mov    %eax,%edx
+  40beea:	8b 85 2c fe ff ff    	mov    -0x1d4(%rbp),%eax
+  40bef0:	01 c2                	add    %eax,%edx
+  40bef2:	8b 85 d8 fd ff ff    	mov    -0x228(%rbp),%eax
+  40bef8:	48 98                	cltq   
+  40befa:	48 c1 e0 04          	shl    $0x4,%rax
+  40befe:	48 01 e8             	add    %rbp,%rax
+  40bf01:	48 2d 90 00 00 00    	sub    $0x90,%rax
+  40bf07:	89 10                	mov    %edx,(%rax)
+        Dxy[k][1] = dy2*sum_cols + dx1;
+  40bf09:	8b 85 38 fe ff ff    	mov    -0x1c8(%rbp),%eax
+  40bf0f:	0f af 85 c8 fd ff ff 	imul   -0x238(%rbp),%eax
+  40bf16:	89 c2                	mov    %eax,%edx
+  40bf18:	8b 85 2c fe ff ff    	mov    -0x1d4(%rbp),%eax
+  40bf1e:	01 c2                	add    %eax,%edx
+  40bf20:	8b 85 d8 fd ff ff    	mov    -0x228(%rbp),%eax
+  40bf26:	48 98                	cltq   
+  40bf28:	48 c1 e0 04          	shl    $0x4,%rax
+  40bf2c:	48 01 e8             	add    %rbp,%rax
+  40bf2f:	48 2d 8c 00 00 00    	sub    $0x8c,%rax
+  40bf35:	89 10                	mov    %edx,(%rax)
+        Dxy[k][2] = dy1*sum_cols + dx2;
+  40bf37:	8b 85 30 fe ff ff    	mov    -0x1d0(%rbp),%eax
+  40bf3d:	0f af 85 c8 fd ff ff 	imul   -0x238(%rbp),%eax
+  40bf44:	89 c2                	mov    %eax,%edx
+  40bf46:	8b 85 34 fe ff ff    	mov    -0x1cc(%rbp),%eax
+  40bf4c:	01 c2                	add    %eax,%edx
+  40bf4e:	8b 85 d8 fd ff ff    	mov    -0x228(%rbp),%eax
+  40bf54:	48 98                	cltq   
+  40bf56:	48 c1 e0 04          	shl    $0x4,%rax
+  40bf5a:	48 01 e8             	add    %rbp,%rax
+  40bf5d:	48 2d 88 00 00 00    	sub    $0x88,%rax
+  40bf63:	89 10                	mov    %edx,(%rax)
+        Dxy[k][3] = dy2*sum_cols + dx2;
+  40bf65:	8b 85 38 fe ff ff    	mov    -0x1c8(%rbp),%eax
+  40bf6b:	0f af 85 c8 fd ff ff 	imul   -0x238(%rbp),%eax
+  40bf72:	89 c2                	mov    %eax,%edx
+  40bf74:	8b 85 34 fe ff ff    	mov    -0x1cc(%rbp),%eax
+  40bf7a:	01 c2                	add    %eax,%edx
+  40bf7c:	8b 85 d8 fd ff ff    	mov    -0x228(%rbp),%eax
+  40bf82:	48 98                	cltq   
+  40bf84:	48 c1 e0 04          	shl    $0x4,%rax
+  40bf88:	48 01 e8             	add    %rbp,%rax
+  40bf8b:	48 2d 84 00 00 00    	sub    $0x84,%rax
+  40bf91:	89 10                	mov    %edx,(%rax)
+        Dxy_float[k] = dxy_s[k][4]/((float)(dx2-dx1)*(dy2-dy1));
+  40bf93:	8b 85 d8 fd ff ff    	mov    -0x228(%rbp),%eax
+  40bf99:	48 63 d0             	movslq %eax,%rdx
+  40bf9c:	48 89 d0             	mov    %rdx,%rax
+  40bf9f:	48 c1 e0 02          	shl    $0x2,%rax
+  40bfa3:	48 01 d0             	add    %rdx,%rax
+  40bfa6:	48 c1 e0 02          	shl    $0x2,%rax
+  40bfaa:	48 01 e8             	add    %rbp,%rax
+  40bfad:	48 83 e8 40          	sub    $0x40,%rax
+  40bfb1:	8b 00                	mov    (%rax),%eax
+  40bfb3:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40bfb7:	8b 85 2c fe ff ff    	mov    -0x1d4(%rbp),%eax
+  40bfbd:	8b 95 34 fe ff ff    	mov    -0x1cc(%rbp),%edx
+  40bfc3:	29 c2                	sub    %eax,%edx
+  40bfc5:	89 d0                	mov    %edx,%eax
+  40bfc7:	f3 0f 2a d0          	cvtsi2ss %eax,%xmm2
+  40bfcb:	8b 85 30 fe ff ff    	mov    -0x1d0(%rbp),%eax
+  40bfd1:	8b 95 38 fe ff ff    	mov    -0x1c8(%rbp),%edx
+  40bfd7:	29 c2                	sub    %eax,%edx
+  40bfd9:	89 d0                	mov    %edx,%eax
+  40bfdb:	f3 0f 2a c8          	cvtsi2ss %eax,%xmm1
+  40bfdf:	f3 0f 59 ca          	mulss  %xmm2,%xmm1
+  40bfe3:	f3 0f 5e c1          	divss  %xmm1,%xmm0
+  40bfe7:	8b 85 d8 fd ff ff    	mov    -0x228(%rbp),%eax
+  40bfed:	48 98                	cltq   
+  40bfef:	f3 0f 11 84 85 80 fe 	movss  %xmm0,-0x180(%rbp,%rax,4)
+  40bff6:	ff ff 
+        Dy[k][3] = dy2*sum_cols + dx2;
+        Dy_float[k] = dy_s[k][4]/((float)(dx2-dx1)*(dy2-dy1));
+    }
+    //resizeHaarPattern( dxy_s, Dxy, NXY, 9, size, sum_cols );    
+    ratio = (float)size/9;
+    for( int k = 0; k < NXY; k++ )
+  40bff8:	83 85 d8 fd ff ff 01 	addl   $0x1,-0x228(%rbp)
+  40bfff:	83 bd d8 fd ff ff 03 	cmpl   $0x3,-0x228(%rbp)
+  40c006:	0f 8e 43 fb ff ff    	jle    40bb4f <_ZL20calcLayerDetAndTraceiiPKhiiiPfiS1_i+0xe2b>
+        Dxy[k][3] = dy2*sum_cols + dx2;
+        Dxy_float[k] = dxy_s[k][4]/((float)(dx2-dx1)*(dy2-dy1));
+    }
+
+    /* The integral image 'sum' is one pixel bigger than the source image */
+    int samples_i = 1+(sum_rows-1-size)/sampleStep;
+  40c00c:	8b 85 cc fd ff ff    	mov    -0x234(%rbp),%eax
+  40c012:	83 e8 01             	sub    $0x1,%eax
+  40c015:	2b 85 b8 fd ff ff    	sub    -0x248(%rbp),%eax
+  40c01b:	99                   	cltd   
+  40c01c:	f7 bd b4 fd ff ff    	idivl  -0x24c(%rbp)
+  40c022:	83 c0 01             	add    $0x1,%eax
+  40c025:	89 85 3c fe ff ff    	mov    %eax,-0x1c4(%rbp)
+    int samples_j = 1+(sum_cols-1-size)/sampleStep;
+  40c02b:	8b 85 c8 fd ff ff    	mov    -0x238(%rbp),%eax
+  40c031:	83 e8 01             	sub    $0x1,%eax
+  40c034:	2b 85 b8 fd ff ff    	sub    -0x248(%rbp),%eax
+  40c03a:	99                   	cltd   
+  40c03b:	f7 bd b4 fd ff ff    	idivl  -0x24c(%rbp)
+  40c041:	83 c0 01             	add    $0x1,%eax
+  40c044:	89 85 40 fe ff ff    	mov    %eax,-0x1c0(%rbp)
+
+    /* Ignore pixels where some of the kernel is outside the image */
+    int margin = (size/2)/sampleStep;
+  40c04a:	8b 85 b8 fd ff ff    	mov    -0x248(%rbp),%eax
+  40c050:	89 c2                	mov    %eax,%edx
+  40c052:	c1 ea 1f             	shr    $0x1f,%edx
+  40c055:	01 d0                	add    %edx,%eax
+  40c057:	d1 f8                	sar    %eax
+  40c059:	99                   	cltd   
+  40c05a:	f7 bd b4 fd ff ff    	idivl  -0x24c(%rbp)
+  40c060:	89 85 44 fe ff ff    	mov    %eax,-0x1bc(%rbp)
+
+    for( int i = 0; i < samples_i; i++ )
+  40c066:	c7 85 dc fd ff ff 00 	movl   $0x0,-0x224(%rbp)
+  40c06d:	00 00 00 
+  40c070:	e9 92 04 00 00       	jmpq   40c507 <_ZL20calcLayerDetAndTraceiiPKhiiiPfiS1_i+0x17e3>
+    {
+        //const int* sum_ptr = sum.ptr<int>(i*sampleStep);
+        const int* sum_ptr = (int *)(sum_data + sum_step_p0*i*sampleStep);
+  40c075:	8b 85 bc fd ff ff    	mov    -0x244(%rbp),%eax
+  40c07b:	0f af 85 dc fd ff ff 	imul   -0x224(%rbp),%eax
+  40c082:	0f af 85 b4 fd ff ff 	imul   -0x24c(%rbp),%eax
+  40c089:	48 63 d0             	movslq %eax,%rdx
+  40c08c:	48 8b 85 c0 fd ff ff 	mov    -0x240(%rbp),%rax
+  40c093:	48 01 d0             	add    %rdx,%rax
+  40c096:	48 89 85 48 fe ff ff 	mov    %rax,-0x1b8(%rbp)
+        //float* det_ptr = &det.at<float>(i+margin, margin);
+	//float* det_ptr = (float *)( (uchar *)det_data + det_step_p0*(i+margin))[margin];
+	float* det_ptr = &((float *)((uchar *)det_data + det_step_p0*(i+margin)))[margin];
+  40c09d:	8b 85 44 fe ff ff    	mov    -0x1bc(%rbp),%eax
+  40c0a3:	8b 95 dc fd ff ff    	mov    -0x224(%rbp),%edx
+  40c0a9:	01 d0                	add    %edx,%eax
+  40c0ab:	0f af 45 18          	imul   0x18(%rbp),%eax
+  40c0af:	48 98                	cltq   
+  40c0b1:	8b 95 44 fe ff ff    	mov    -0x1bc(%rbp),%edx
+  40c0b7:	48 63 d2             	movslq %edx,%rdx
+  40c0ba:	48 c1 e2 02          	shl    $0x2,%rdx
+  40c0be:	48 01 c2             	add    %rax,%rdx
+  40c0c1:	48 8b 45 10          	mov    0x10(%rbp),%rax
+  40c0c5:	48 01 d0             	add    %rdx,%rax
+  40c0c8:	48 89 85 50 fe ff ff 	mov    %rax,-0x1b0(%rbp)
+        //float* trace_ptr = &trace.at<float>(i+margin, margin);
+	//float* trace_ptr = (float *)( (uchar *)trace_data + trace_step_p0*(i+margin))[margin];
+	float* trace_ptr = &((float *)((uchar *)trace_data + trace_step_p0*(i+margin)))[margin];
+  40c0cf:	8b 85 44 fe ff ff    	mov    -0x1bc(%rbp),%eax
+  40c0d5:	8b 95 dc fd ff ff    	mov    -0x224(%rbp),%edx
+  40c0db:	01 d0                	add    %edx,%eax
+  40c0dd:	0f af 45 28          	imul   0x28(%rbp),%eax
+  40c0e1:	48 98                	cltq   
+  40c0e3:	8b 95 44 fe ff ff    	mov    -0x1bc(%rbp),%edx
+  40c0e9:	48 63 d2             	movslq %edx,%rdx
+  40c0ec:	48 c1 e2 02          	shl    $0x2,%rdx
+  40c0f0:	48 01 c2             	add    %rax,%rdx
+  40c0f3:	48 8b 45 20          	mov    0x20(%rbp),%rax
+  40c0f7:	48 01 d0             	add    %rdx,%rax
+  40c0fa:	48 89 85 58 fe ff ff 	mov    %rax,-0x1a8(%rbp)
+        for( int j = 0; j < samples_j; j++ )
+  40c101:	c7 85 e0 fd ff ff 00 	movl   $0x0,-0x220(%rbp)
+  40c108:	00 00 00 
+  40c10b:	e9 de 03 00 00       	jmpq   40c4ee <_ZL20calcLayerDetAndTraceiiPKhiiiPfiS1_i+0x17ca>
+        {
+//           float dx  = calcHaarPattern( sum_ptr, Dx , 3 );
+	    float dx = 0;
+  40c110:	8b 05 da de 4d 00    	mov    0x4ddeda(%rip),%eax        # 8e9ff0 <_ZZL18__gthread_active_pvE20__gthread_active_ptr+0x20>
+  40c116:	89 85 e4 fd ff ff    	mov    %eax,-0x21c(%rbp)
+	    //double dx_temp = 0;
+	    for( int k = 0; k < 3; k++ )
+  40c11c:	c7 85 e8 fd ff ff 00 	movl   $0x0,-0x218(%rbp)
+  40c123:	00 00 00 
+  40c126:	e9 f0 00 00 00       	jmpq   40c21b <_ZL20calcLayerDetAndTraceiiPKhiiiPfiS1_i+0x14f7>
+		dx += (sum_ptr[Dx[k][0]] + sum_ptr[Dx[k][3]] - sum_ptr[Dx[k][1]] - sum_ptr[Dx[k][2]])*Dx_float[k];
+  40c12b:	8b 85 e8 fd ff ff    	mov    -0x218(%rbp),%eax
+  40c131:	48 98                	cltq   
+  40c133:	48 c1 e0 04          	shl    $0x4,%rax
+  40c137:	48 01 e8             	add    %rbp,%rax
+  40c13a:	48 2d 70 01 00 00    	sub    $0x170,%rax
+  40c140:	8b 00                	mov    (%rax),%eax
+  40c142:	48 98                	cltq   
+  40c144:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40c14b:	00 
+  40c14c:	48 8b 85 48 fe ff ff 	mov    -0x1b8(%rbp),%rax
+  40c153:	48 01 d0             	add    %rdx,%rax
+  40c156:	8b 10                	mov    (%rax),%edx
+  40c158:	8b 85 e8 fd ff ff    	mov    -0x218(%rbp),%eax
+  40c15e:	48 98                	cltq   
+  40c160:	48 c1 e0 04          	shl    $0x4,%rax
+  40c164:	48 01 e8             	add    %rbp,%rax
+  40c167:	48 2d 64 01 00 00    	sub    $0x164,%rax
+  40c16d:	8b 00                	mov    (%rax),%eax
+  40c16f:	48 98                	cltq   
+  40c171:	48 8d 0c 85 00 00 00 	lea    0x0(,%rax,4),%rcx
+  40c178:	00 
+  40c179:	48 8b 85 48 fe ff ff 	mov    -0x1b8(%rbp),%rax
+  40c180:	48 01 c8             	add    %rcx,%rax
+  40c183:	8b 00                	mov    (%rax),%eax
+  40c185:	01 c2                	add    %eax,%edx
+  40c187:	8b 85 e8 fd ff ff    	mov    -0x218(%rbp),%eax
+  40c18d:	48 98                	cltq   
+  40c18f:	48 c1 e0 04          	shl    $0x4,%rax
+  40c193:	48 01 e8             	add    %rbp,%rax
+  40c196:	48 2d 6c 01 00 00    	sub    $0x16c,%rax
+  40c19c:	8b 00                	mov    (%rax),%eax
+  40c19e:	48 98                	cltq   
+  40c1a0:	48 8d 0c 85 00 00 00 	lea    0x0(,%rax,4),%rcx
+  40c1a7:	00 
+  40c1a8:	48 8b 85 48 fe ff ff 	mov    -0x1b8(%rbp),%rax
+  40c1af:	48 01 c8             	add    %rcx,%rax
+  40c1b2:	8b 00                	mov    (%rax),%eax
+  40c1b4:	29 c2                	sub    %eax,%edx
+  40c1b6:	8b 85 e8 fd ff ff    	mov    -0x218(%rbp),%eax
+  40c1bc:	48 98                	cltq   
+  40c1be:	48 c1 e0 04          	shl    $0x4,%rax
+  40c1c2:	48 01 e8             	add    %rbp,%rax
+  40c1c5:	48 2d 68 01 00 00    	sub    $0x168,%rax
+  40c1cb:	8b 00                	mov    (%rax),%eax
+  40c1cd:	48 98                	cltq   
+  40c1cf:	48 8d 0c 85 00 00 00 	lea    0x0(,%rax,4),%rcx
+  40c1d6:	00 
+  40c1d7:	48 8b 85 48 fe ff ff 	mov    -0x1b8(%rbp),%rax
+  40c1de:	48 01 c8             	add    %rcx,%rax
+  40c1e1:	8b 00                	mov    (%rax),%eax
+  40c1e3:	29 c2                	sub    %eax,%edx
+  40c1e5:	89 d0                	mov    %edx,%eax
+  40c1e7:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40c1eb:	8b 85 e8 fd ff ff    	mov    -0x218(%rbp),%eax
+  40c1f1:	48 98                	cltq   
+  40c1f3:	f3 0f 10 8c 85 60 fe 	movss  -0x1a0(%rbp,%rax,4),%xmm1
+  40c1fa:	ff ff 
+  40c1fc:	f3 0f 59 c1          	mulss  %xmm1,%xmm0
+  40c200:	f3 0f 10 8d e4 fd ff 	movss  -0x21c(%rbp),%xmm1
+  40c207:	ff 
+  40c208:	f3 0f 58 c1          	addss  %xmm1,%xmm0
+  40c20c:	f3 0f 11 85 e4 fd ff 	movss  %xmm0,-0x21c(%rbp)
+  40c213:	ff 
+        for( int j = 0; j < samples_j; j++ )
+        {
+//           float dx  = calcHaarPattern( sum_ptr, Dx , 3 );
+	    float dx = 0;
+	    //double dx_temp = 0;
+	    for( int k = 0; k < 3; k++ )
+  40c214:	83 85 e8 fd ff ff 01 	addl   $0x1,-0x218(%rbp)
+  40c21b:	83 bd e8 fd ff ff 02 	cmpl   $0x2,-0x218(%rbp)
+  40c222:	0f 8e 03 ff ff ff    	jle    40c12b <_ZL20calcLayerDetAndTraceiiPKhiiiPfiS1_i+0x1407>
+		dx += (sum_ptr[Dx[k][0]] + sum_ptr[Dx[k][3]] - sum_ptr[Dx[k][1]] - sum_ptr[Dx[k][2]])*Dx_float[k];
+	    //dx = (float)dx_temp;
+//            float dy  = calcHaarPattern( sum_ptr, Dy , 3 );
+	    float dy = 0;
+  40c228:	8b 05 c2 dd 4d 00    	mov    0x4dddc2(%rip),%eax        # 8e9ff0 <_ZZL18__gthread_active_pvE20__gthread_active_ptr+0x20>
+  40c22e:	89 85 ec fd ff ff    	mov    %eax,-0x214(%rbp)
+	    //double dy_temp = 0;
+	    for( int k = 0; k < 3; k++ )
+  40c234:	c7 85 f0 fd ff ff 00 	movl   $0x0,-0x210(%rbp)
+  40c23b:	00 00 00 
+  40c23e:	e9 f0 00 00 00       	jmpq   40c333 <_ZL20calcLayerDetAndTraceiiPKhiiiPfiS1_i+0x160f>
+		dy += (sum_ptr[Dy[k][0]] + sum_ptr[Dy[k][3]] - sum_ptr[Dy[k][1]] - sum_ptr[Dy[k][2]])*Dy_float[k];
+  40c243:	8b 85 f0 fd ff ff    	mov    -0x210(%rbp),%eax
+  40c249:	48 98                	cltq   
+  40c24b:	48 c1 e0 04          	shl    $0x4,%rax
+  40c24f:	48 01 e8             	add    %rbp,%rax
+  40c252:	48 2d 40 01 00 00    	sub    $0x140,%rax
+  40c258:	8b 00                	mov    (%rax),%eax
+  40c25a:	48 98                	cltq   
+  40c25c:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40c263:	00 
+  40c264:	48 8b 85 48 fe ff ff 	mov    -0x1b8(%rbp),%rax
+  40c26b:	48 01 d0             	add    %rdx,%rax
+  40c26e:	8b 10                	mov    (%rax),%edx
+  40c270:	8b 85 f0 fd ff ff    	mov    -0x210(%rbp),%eax
+  40c276:	48 98                	cltq   
+  40c278:	48 c1 e0 04          	shl    $0x4,%rax
+  40c27c:	48 01 e8             	add    %rbp,%rax
+  40c27f:	48 2d 34 01 00 00    	sub    $0x134,%rax
+  40c285:	8b 00                	mov    (%rax),%eax
+  40c287:	48 98                	cltq   
+  40c289:	48 8d 0c 85 00 00 00 	lea    0x0(,%rax,4),%rcx
+  40c290:	00 
+  40c291:	48 8b 85 48 fe ff ff 	mov    -0x1b8(%rbp),%rax
+  40c298:	48 01 c8             	add    %rcx,%rax
+  40c29b:	8b 00                	mov    (%rax),%eax
+  40c29d:	01 c2                	add    %eax,%edx
+  40c29f:	8b 85 f0 fd ff ff    	mov    -0x210(%rbp),%eax
+  40c2a5:	48 98                	cltq   
+  40c2a7:	48 c1 e0 04          	shl    $0x4,%rax
+  40c2ab:	48 01 e8             	add    %rbp,%rax
+  40c2ae:	48 2d 3c 01 00 00    	sub    $0x13c,%rax
+  40c2b4:	8b 00                	mov    (%rax),%eax
+  40c2b6:	48 98                	cltq   
+  40c2b8:	48 8d 0c 85 00 00 00 	lea    0x0(,%rax,4),%rcx
+  40c2bf:	00 
+  40c2c0:	48 8b 85 48 fe ff ff 	mov    -0x1b8(%rbp),%rax
+  40c2c7:	48 01 c8             	add    %rcx,%rax
+  40c2ca:	8b 00                	mov    (%rax),%eax
+  40c2cc:	29 c2                	sub    %eax,%edx
+  40c2ce:	8b 85 f0 fd ff ff    	mov    -0x210(%rbp),%eax
+  40c2d4:	48 98                	cltq   
+  40c2d6:	48 c1 e0 04          	shl    $0x4,%rax
+  40c2da:	48 01 e8             	add    %rbp,%rax
+  40c2dd:	48 2d 38 01 00 00    	sub    $0x138,%rax
+  40c2e3:	8b 00                	mov    (%rax),%eax
+  40c2e5:	48 98                	cltq   
+  40c2e7:	48 8d 0c 85 00 00 00 	lea    0x0(,%rax,4),%rcx
+  40c2ee:	00 
+  40c2ef:	48 8b 85 48 fe ff ff 	mov    -0x1b8(%rbp),%rax
+  40c2f6:	48 01 c8             	add    %rcx,%rax
+  40c2f9:	8b 00                	mov    (%rax),%eax
+  40c2fb:	29 c2                	sub    %eax,%edx
+  40c2fd:	89 d0                	mov    %edx,%eax
+  40c2ff:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40c303:	8b 85 f0 fd ff ff    	mov    -0x210(%rbp),%eax
+  40c309:	48 98                	cltq   
+  40c30b:	f3 0f 10 8c 85 70 fe 	movss  -0x190(%rbp,%rax,4),%xmm1
+  40c312:	ff ff 
+  40c314:	f3 0f 59 c1          	mulss  %xmm1,%xmm0
+  40c318:	f3 0f 10 8d ec fd ff 	movss  -0x214(%rbp),%xmm1
+  40c31f:	ff 
+  40c320:	f3 0f 58 c1          	addss  %xmm1,%xmm0
+  40c324:	f3 0f 11 85 ec fd ff 	movss  %xmm0,-0x214(%rbp)
+  40c32b:	ff 
+		dx += (sum_ptr[Dx[k][0]] + sum_ptr[Dx[k][3]] - sum_ptr[Dx[k][1]] - sum_ptr[Dx[k][2]])*Dx_float[k];
+	    //dx = (float)dx_temp;
+//            float dy  = calcHaarPattern( sum_ptr, Dy , 3 );
+	    float dy = 0;
+	    //double dy_temp = 0;
+	    for( int k = 0; k < 3; k++ )
+  40c32c:	83 85 f0 fd ff ff 01 	addl   $0x1,-0x210(%rbp)
+  40c333:	83 bd f0 fd ff ff 02 	cmpl   $0x2,-0x210(%rbp)
+  40c33a:	0f 8e 03 ff ff ff    	jle    40c243 <_ZL20calcLayerDetAndTraceiiPKhiiiPfiS1_i+0x151f>
+		dy += (sum_ptr[Dy[k][0]] + sum_ptr[Dy[k][3]] - sum_ptr[Dy[k][1]] - sum_ptr[Dy[k][2]])*Dy_float[k];
+	    //dy = (float)dy_temp;
+//            float dxy = calcHaarPattern( sum_ptr, Dxy, 4 );
+	    float dxy = 0;
+  40c340:	8b 05 aa dc 4d 00    	mov    0x4ddcaa(%rip),%eax        # 8e9ff0 <_ZZL18__gthread_active_pvE20__gthread_active_ptr+0x20>
+  40c346:	89 85 f4 fd ff ff    	mov    %eax,-0x20c(%rbp)
+	    //double dxy_temp = 0;
+	    for( int k = 0; k < 4; k++ )
+  40c34c:	c7 85 f8 fd ff ff 00 	movl   $0x0,-0x208(%rbp)
+  40c353:	00 00 00 
+  40c356:	e9 f0 00 00 00       	jmpq   40c44b <_ZL20calcLayerDetAndTraceiiPKhiiiPfiS1_i+0x1727>
+		dxy += (sum_ptr[Dxy[k][0]] + sum_ptr[Dxy[k][3]] - sum_ptr[Dxy[k][1]] - sum_ptr[Dxy[k][2]])*Dxy_float[k];
+  40c35b:	8b 85 f8 fd ff ff    	mov    -0x208(%rbp),%eax
+  40c361:	48 98                	cltq   
+  40c363:	48 c1 e0 04          	shl    $0x4,%rax
+  40c367:	48 01 e8             	add    %rbp,%rax
+  40c36a:	48 2d 90 00 00 00    	sub    $0x90,%rax
+  40c370:	8b 00                	mov    (%rax),%eax
+  40c372:	48 98                	cltq   
+  40c374:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40c37b:	00 
+  40c37c:	48 8b 85 48 fe ff ff 	mov    -0x1b8(%rbp),%rax
+  40c383:	48 01 d0             	add    %rdx,%rax
+  40c386:	8b 10                	mov    (%rax),%edx
+  40c388:	8b 85 f8 fd ff ff    	mov    -0x208(%rbp),%eax
+  40c38e:	48 98                	cltq   
+  40c390:	48 c1 e0 04          	shl    $0x4,%rax
+  40c394:	48 01 e8             	add    %rbp,%rax
+  40c397:	48 2d 84 00 00 00    	sub    $0x84,%rax
+  40c39d:	8b 00                	mov    (%rax),%eax
+  40c39f:	48 98                	cltq   
+  40c3a1:	48 8d 0c 85 00 00 00 	lea    0x0(,%rax,4),%rcx
+  40c3a8:	00 
+  40c3a9:	48 8b 85 48 fe ff ff 	mov    -0x1b8(%rbp),%rax
+  40c3b0:	48 01 c8             	add    %rcx,%rax
+  40c3b3:	8b 00                	mov    (%rax),%eax
+  40c3b5:	01 c2                	add    %eax,%edx
+  40c3b7:	8b 85 f8 fd ff ff    	mov    -0x208(%rbp),%eax
+  40c3bd:	48 98                	cltq   
+  40c3bf:	48 c1 e0 04          	shl    $0x4,%rax
+  40c3c3:	48 01 e8             	add    %rbp,%rax
+  40c3c6:	48 2d 8c 00 00 00    	sub    $0x8c,%rax
+  40c3cc:	8b 00                	mov    (%rax),%eax
+  40c3ce:	48 98                	cltq   
+  40c3d0:	48 8d 0c 85 00 00 00 	lea    0x0(,%rax,4),%rcx
+  40c3d7:	00 
+  40c3d8:	48 8b 85 48 fe ff ff 	mov    -0x1b8(%rbp),%rax
+  40c3df:	48 01 c8             	add    %rcx,%rax
+  40c3e2:	8b 00                	mov    (%rax),%eax
+  40c3e4:	29 c2                	sub    %eax,%edx
+  40c3e6:	8b 85 f8 fd ff ff    	mov    -0x208(%rbp),%eax
+  40c3ec:	48 98                	cltq   
+  40c3ee:	48 c1 e0 04          	shl    $0x4,%rax
+  40c3f2:	48 01 e8             	add    %rbp,%rax
+  40c3f5:	48 2d 88 00 00 00    	sub    $0x88,%rax
+  40c3fb:	8b 00                	mov    (%rax),%eax
+  40c3fd:	48 98                	cltq   
+  40c3ff:	48 8d 0c 85 00 00 00 	lea    0x0(,%rax,4),%rcx
+  40c406:	00 
+  40c407:	48 8b 85 48 fe ff ff 	mov    -0x1b8(%rbp),%rax
+  40c40e:	48 01 c8             	add    %rcx,%rax
+  40c411:	8b 00                	mov    (%rax),%eax
+  40c413:	29 c2                	sub    %eax,%edx
+  40c415:	89 d0                	mov    %edx,%eax
+  40c417:	f3 0f 2a c0          	cvtsi2ss %eax,%xmm0
+  40c41b:	8b 85 f8 fd ff ff    	mov    -0x208(%rbp),%eax
+  40c421:	48 98                	cltq   
+  40c423:	f3 0f 10 8c 85 80 fe 	movss  -0x180(%rbp,%rax,4),%xmm1
+  40c42a:	ff ff 
+  40c42c:	f3 0f 59 c1          	mulss  %xmm1,%xmm0
+  40c430:	f3 0f 10 8d f4 fd ff 	movss  -0x20c(%rbp),%xmm1
+  40c437:	ff 
+  40c438:	f3 0f 58 c1          	addss  %xmm1,%xmm0
+  40c43c:	f3 0f 11 85 f4 fd ff 	movss  %xmm0,-0x20c(%rbp)
+  40c443:	ff 
+		dy += (sum_ptr[Dy[k][0]] + sum_ptr[Dy[k][3]] - sum_ptr[Dy[k][1]] - sum_ptr[Dy[k][2]])*Dy_float[k];
+	    //dy = (float)dy_temp;
+//            float dxy = calcHaarPattern( sum_ptr, Dxy, 4 );
+	    float dxy = 0;
+	    //double dxy_temp = 0;
+	    for( int k = 0; k < 4; k++ )
+  40c444:	83 85 f8 fd ff ff 01 	addl   $0x1,-0x208(%rbp)
+  40c44b:	83 bd f8 fd ff ff 03 	cmpl   $0x3,-0x208(%rbp)
+  40c452:	0f 8e 03 ff ff ff    	jle    40c35b <_ZL20calcLayerDetAndTraceiiPKhiiiPfiS1_i+0x1637>
+		dxy += (sum_ptr[Dxy[k][0]] + sum_ptr[Dxy[k][3]] - sum_ptr[Dxy[k][1]] - sum_ptr[Dxy[k][2]])*Dxy_float[k];
+	    //dxy = (float) dxy_temp;
+            sum_ptr += sampleStep;
+  40c458:	8b 85 b4 fd ff ff    	mov    -0x24c(%rbp),%eax
+  40c45e:	48 98                	cltq   
+  40c460:	48 c1 e0 02          	shl    $0x2,%rax
+  40c464:	48 01 85 48 fe ff ff 	add    %rax,-0x1b8(%rbp)
+            det_ptr[j] = dx*dy - 0.81f*dxy*dxy;
+  40c46b:	8b 85 e0 fd ff ff    	mov    -0x220(%rbp),%eax
+  40c471:	48 98                	cltq   
+  40c473:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40c47a:	00 
+  40c47b:	48 8b 85 50 fe ff ff 	mov    -0x1b0(%rbp),%rax
+  40c482:	48 01 d0             	add    %rdx,%rax
+  40c485:	f3 0f 10 85 e4 fd ff 	movss  -0x21c(%rbp),%xmm0
+  40c48c:	ff 
+  40c48d:	f3 0f 59 85 ec fd ff 	mulss  -0x214(%rbp),%xmm0
+  40c494:	ff 
+  40c495:	f3 0f 10 95 f4 fd ff 	movss  -0x20c(%rbp),%xmm2
+  40c49c:	ff 
+  40c49d:	f3 0f 10 0d 63 db 4d 	movss  0x4ddb63(%rip),%xmm1        # 8ea008 <_ZZL18__gthread_active_pvE20__gthread_active_ptr+0x38>
+  40c4a4:	00 
+  40c4a5:	f3 0f 59 ca          	mulss  %xmm2,%xmm1
+  40c4a9:	f3 0f 59 8d f4 fd ff 	mulss  -0x20c(%rbp),%xmm1
+  40c4b0:	ff 
+  40c4b1:	f3 0f 5c c1          	subss  %xmm1,%xmm0
+  40c4b5:	f3 0f 11 00          	movss  %xmm0,(%rax)
+            trace_ptr[j] = dx + dy;
+  40c4b9:	8b 85 e0 fd ff ff    	mov    -0x220(%rbp),%eax
+  40c4bf:	48 98                	cltq   
+  40c4c1:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+  40c4c8:	00 
+  40c4c9:	48 8b 85 58 fe ff ff 	mov    -0x1a8(%rbp),%rax
+  40c4d0:	48 01 d0             	add    %rdx,%rax
+  40c4d3:	f3 0f 10 85 e4 fd ff 	movss  -0x21c(%rbp),%xmm0
+  40c4da:	ff 
+  40c4db:	f3 0f 58 85 ec fd ff 	addss  -0x214(%rbp),%xmm0
+  40c4e2:	ff 
+  40c4e3:	f3 0f 11 00          	movss  %xmm0,(%rax)
+	//float* det_ptr = (float *)( (uchar *)det_data + det_step_p0*(i+margin))[margin];
+	float* det_ptr = &((float *)((uchar *)det_data + det_step_p0*(i+margin)))[margin];
+        //float* trace_ptr = &trace.at<float>(i+margin, margin);
+	//float* trace_ptr = (float *)( (uchar *)trace_data + trace_step_p0*(i+margin))[margin];
+	float* trace_ptr = &((float *)((uchar *)trace_data + trace_step_p0*(i+margin)))[margin];
+        for( int j = 0; j < samples_j; j++ )
+  40c4e7:	83 85 e0 fd ff ff 01 	addl   $0x1,-0x220(%rbp)
+  40c4ee:	8b 85 e0 fd ff ff    	mov    -0x220(%rbp),%eax
+  40c4f4:	3b 85 40 fe ff ff    	cmp    -0x1c0(%rbp),%eax
+  40c4fa:	0f 8c 10 fc ff ff    	jl     40c110 <_ZL20calcLayerDetAndTraceiiPKhiiiPfiS1_i+0x13ec>
+    int samples_j = 1+(sum_cols-1-size)/sampleStep;
+
+    /* Ignore pixels where some of the kernel is outside the image */
+    int margin = (size/2)/sampleStep;
+
+    for( int i = 0; i < samples_i; i++ )
+  40c500:	83 85 dc fd ff ff 01 	addl   $0x1,-0x224(%rbp)
+  40c507:	8b 85 dc fd ff ff    	mov    -0x224(%rbp),%eax
+  40c50d:	3b 85 3c fe ff ff    	cmp    -0x1c4(%rbp),%eax
+  40c513:	0f 8c 5c fb ff ff    	jl     40c075 <_ZL20calcLayerDetAndTraceiiPKhiiiPfiS1_i+0x1351>
+            det_ptr[j] = dx*dy - 0.81f*dxy*dxy;
+            trace_ptr[j] = dx + dy;
+	    //printf ("(%d, %d) det is %f trace is %f \n",i,j,det_ptr[j],trace_ptr[j]);
+        }
+    }
+}
+  40c519:	c9                   	leaveq 
+  40c51a:	c3                   	retq   
+
