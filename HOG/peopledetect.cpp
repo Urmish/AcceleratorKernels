@@ -11,6 +11,9 @@
 using namespace cv;
 using namespace std;
 
+#define My_Round(x) (((x) >= (int)(x)+0.5)? (int)(x)+1:(int)(x))
+
+
 struct DetectionROI2
 {
    // scale(size) of the bounding box
@@ -249,7 +252,7 @@ public:
 
     //CV_WRAP virtual void computeGradient(const Mat& img, CV_OUT Mat& grad, CV_OUT Mat& angleOfs,
     //                             Size paddingTL=Size(), Size paddingBR=Size()) const;
-    CV_WRAP virtual void computeGradient_kernel(const Mat& img, Size* size_ptr, Point& , const float* lut, float* dbuf, Mat& Dx, Mat& Dy, Mat& Mag, Mat& Angle, int* xmap,int cn, uchar** data_ptr, int* step_ptr,Size paddingTL=Size(), Size paddingBR=Size() ) const;
+    CV_WRAP virtual void computeGradient_kernel(Size* size_ptr, Point& , const float* lut, float* dbuf, Mat& Dx, Mat& Dy, Mat& Mag, Mat& Angle, int* xmap,int cn, uchar** data_ptr, int* step_ptr,Size paddingTL=Size(), Size paddingBR=Size() ) const;
 
     CV_WRAP static vector<float> getDefaultPeopleDetector();
     CV_WRAP static vector<float> getDaimlerPeopleDetector();
@@ -428,15 +431,15 @@ void HOGDescriptor2::copyTo(HOGDescriptor2& c) const
 //ACCPOT - Convolution sort of structure or an accelerator
 //void HOGDescriptor2::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
 //                                    Size paddingTL, Size paddingBR) const
-void HOGDescriptor2::computeGradient_kernel(const Mat& img ,Size* size_ptr, Point& roiofs ,
+void HOGDescriptor2::computeGradient_kernel(Size* size_ptr, Point& roiofs ,
                                             const float* lut, float* dbuf, Mat& Dx, Mat& Dy, 
                                             Mat& Mag, Mat& Angle,int* xmap, int cn, 
                                             uchar** data_ptr, int* step_ptr,Size paddingTL, 
                                             Size paddingBR) const
 
 //Size size_ptr[2] = {gradsize,wholeSize};
-//uchar* data_ptr[2] = {grad.data, qangle.data } ;
-//int step_ptr[2] = { grad.step.p[0],  qangle.step.p[0] };
+//uchar* data_ptr[3] = {grad.data, qangle.data,_img.data } ;
+//int step_ptr[3] = { grad.step.p[0],  qangle.step.p[0],_img.step };
 {
 
 
@@ -531,9 +534,12 @@ void HOGDescriptor2::computeGradient_kernel(const Mat& img ,Size* size_ptr, Poin
     float angleScale = (float)(_nbins/CV_PI);
     for( y = 0; y < size_ptr[0].height; y++ )
     {
-        const uchar* imgPtr  = img.data + img.step*ymap[y];
-        const uchar* prevPtr = img.data + img.step*ymap[y-1];
-        const uchar* nextPtr = img.data + img.step*ymap[y+1];
+        //const uchar* imgPtr  = img.data + img.step*ymap[y];
+        //const uchar* prevPtr = img.data + img.step*ymap[y-1];
+        //const uchar* nextPtr = img.data + img.step*ymap[y+1];
+        const uchar* imgPtr  = data_ptr[2] + step_ptr[2]*ymap[y];
+        const uchar* prevPtr = data_ptr[2] + step_ptr[2]*ymap[y-1];
+        const uchar* nextPtr = data_ptr[2] + step_ptr[2]*ymap[y+1];
         float* gradPtr = (float*) (data_ptr[0] + step_ptr[0]*y); //Need Grad ptr
         uchar* qanglePtr = (uchar*)(data_ptr[1] + step_ptr[1]*y);// Need qangle ptr
 
@@ -588,7 +594,11 @@ void HOGDescriptor2::computeGradient_kernel(const Mat& img ,Size* size_ptr, Poin
         for( x = 0; x < width; x++ )
         {
             float mag = dbuf[x+width*2], angle = dbuf[x+width*3]*angleScale - 0.5f;
-            int hidx = cvFloor(angle);
+            //int hidx = cvFloor(angle);
+	    int hidx = My_Round(angle);
+ 	    float diff_floor = (float)(angle - hidx);
+            hidx = hidx - (diff_floor < 0);
+
             angle -= hidx;
             gradPtr[x*2] = mag*(1.f - angle);
             gradPtr[x*2+1] = mag*angle;
@@ -710,9 +720,9 @@ void HOGCache2::init(const HOGDescriptor2* _descriptor,
     int* xmap = (int*)mapbuf + 1;
     int cn = _img.channels();
     _img.locateROI(size_ptr[1], roiofs);
-    uchar* data_ptr[2] = {grad.data, qangle.data } ;
-    int   step_ptr[2] = { grad.step.p[0],  qangle.step.p[0] };
-    descriptor->computeGradient_kernel(_img, size_ptr, roiofs ,lut, dbuf, Dx, Dy, Mag, Angle, xmap, cn, data_ptr, step_ptr, _paddingTL, _paddingBR );
+    uchar* data_ptr[3] = {grad.data, qangle.data,_img.data } ;
+    int   step_ptr[3] = { grad.step.p[0],  qangle.step.p[0], _img.step };
+    descriptor->computeGradient_kernel(size_ptr, roiofs ,lut, dbuf, Dx, Dy, Mag, Angle, xmap, cn, data_ptr, step_ptr, _paddingTL, _paddingBR );
     imgoffset = _paddingTL;
 
     winSize = descriptor->winSize;
