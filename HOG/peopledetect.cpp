@@ -10,156 +10,6 @@
 
 using namespace cv;
 using namespace std;
-inline int borderInterpolate_2( int p, int len, int borderType )
-{
-    if( (unsigned)p < (unsigned)len )
-        ;
-    else if( borderType == BORDER_REPLICATE )
-        p = p < 0 ? 0 : len - 1;
-    else if( borderType == BORDER_REFLECT || borderType == BORDER_REFLECT_101 )
-    {
-        int delta = borderType == BORDER_REFLECT_101;
-        if( len == 1 )
-            return 0;
-        do
-        {
-            if( p < 0 )
-                p = -p - 1 + delta;
-            else
-                p = len - 1 - (p - len) - delta;
-        }
-        while( (unsigned)p >= (unsigned)len );
-    }
-    else if( borderType == BORDER_WRAP )
-    {
-        if( p < 0 )
-            p -= ((p-len+1)/len)*len;
-        if( p >= len )
-            p %= len;
-    }
-    else if( borderType == BORDER_CONSTANT )
-        p = -1;
-    else
-        CV_Error( CV_StsBadArg, "Unknown/unsupported border type" );
-    return p;
-}
-static const float atan2_p1 = 0.9997878412794807f*(float)(180/CV_PI);
-static const float atan2_p3 = -0.3258083974640975f*(float)(180/CV_PI);
-static const float atan2_p5 = 0.1555786518463281f*(float)(180/CV_PI);
-static const float atan2_p7 = -0.04432655554792128f*(float)(180/CV_PI);
-enum { BLOCK_SIZE = 1024 };
-static void Magnitude_2_64f(const double* x, const double* y, double* mag, int len)
-{
-    int i = 0;
-
-    for( ; i < len; i++ )
-    {
-        double x0 = x[i], y0 = y[i];
-        mag[i] = std::sqrt(x0*x0 + y0*y0);
-    }
-}
-static void Magnitude_2_32f(const float* x, const float* y, float* mag, int len)
-{
-    int i = 0;
-
-    for( ; i < len; i++ )
-    {
-        float x0 = x[i], y0 = y[i];
-        mag[i] = std::sqrt(x0*x0 + y0*y0);
-    }
-}
-
-static void FastAtan2_2_32f(const float *Y, const float *X, float *angle, int len, bool angleInDegrees=true )
-{
-    int i = 0;
-    float scale = angleInDegrees ? 1 : (float)(CV_PI/180);
-
-
-    for( ; i < len; i++ )
-    {
-        float x = X[i], y = Y[i];
-        float ax = std::abs(x), ay = std::abs(y);
-        float a, c, c2;
-        if( ax >= ay )
-        {
-            c = ay/(ax + (float)DBL_EPSILON);
-            c2 = c*c;
-            a = (((atan2_p7*c2 + atan2_p5)*c2 + atan2_p3)*c2 + atan2_p1)*c;
-        }
-        else
-        {
-            c = ax/(ay + (float)DBL_EPSILON);
-            c2 = c*c;
-            a = 90.f - (((atan2_p7*c2 + atan2_p5)*c2 + atan2_p3)*c2 + atan2_p1)*c;
-        }
-        if( x < 0 )
-            a = 180.f - a;
-        if( y < 0 )
-            a = 360.f - a;
-        angle[i] = (float)(a*scale);
-    }
-}
-
-void cartToPolar_2( InputArray src1, InputArray src2,
-                  OutputArray dst1, OutputArray dst2, bool angleInDegrees )
-{
-    Mat X = src1.getMat(), Y = src2.getMat();
-    int type = X.type(), depth = X.depth(), cn = X.channels();
-    CV_Assert( X.size == Y.size && type == Y.type() && (depth == CV_32F || depth == CV_64F));
-    dst1.create( X.dims, X.size, type );
-    dst2.create( X.dims, X.size, type );
-    Mat Mag = dst1.getMat(), Angle = dst2.getMat();
-
-    const Mat* arrays[] = {&X, &Y, &Mag, &Angle, 0};
-    uchar* ptrs[4];
-    NAryMatIterator it(arrays, ptrs);
-    cv::AutoBuffer<float> _buf;
-    float* buf[2] = {0, 0};
-    int j, k, total = (int)(it.size*cn), blockSize = std::min(total, ((BLOCK_SIZE+cn-1)/cn)*cn);
-    size_t esz1 = X.elemSize1();
-
-    if( depth == CV_64F )
-    {
-        _buf.allocate(blockSize*2);
-        buf[0] = _buf;
-        buf[1] = buf[0] + blockSize;
-    }
-
-    for( size_t i = 0; i < it.nplanes; i++, ++it )
-    {
-        for( j = 0; j < total; j += blockSize )
-        {
-            int len = std::min(total - j, blockSize);
-            if( depth == CV_32F )
-            {
-                const float *x = (const float*)ptrs[0], *y = (const float*)ptrs[1];
-                float *mag = (float*)ptrs[2], *angle = (float*)ptrs[3];
-                Magnitude_2_32f( x, y, mag, len );
-                FastAtan2_2_32f( y, x, angle, len, angleInDegrees );
-            }
-            else
-            {
-                const double *x = (const double*)ptrs[0], *y = (const double*)ptrs[1];
-                double *angle = (double*)ptrs[3];
-
-                Magnitude_2_64f(x, y, (double*)ptrs[2], len);
-                for( k = 0; k < len; k++ )
-                {
-                    buf[0][k] = (float)x[k];
-                    buf[1][k] = (float)y[k];
-                }
-
-                FastAtan2_2_32f( buf[1], buf[0], buf[0], len, angleInDegrees );
-                for( k = 0; k < len; k++ )
-                    angle[k] = buf[0][k];
-            }
-            ptrs[0] += len*esz1;
-            ptrs[1] += len*esz1;
-            ptrs[2] += len*esz1;
-            ptrs[3] += len*esz1;
-        }
-    }
-}
 
 struct DetectionROI2
 {
@@ -248,7 +98,7 @@ public:
 
     //CV_WRAP virtual void computeGradient(const Mat& img, CV_OUT Mat& grad, CV_OUT Mat& angleOfs,
     //                             Size paddingTL=Size(), Size paddingBR=Size()) const;
-      CV_WRAP virtual void computeGradient_kernel(const uchar* img_data, int img_step, Mat& grad, Mat& qangle, int paddingTL_width, int paddingTL_height, int paddingBR_width, int paddingBR_height, int gradsize_width, int gradsize_height, int cn, int wholesize_width, int wholesize_height, int roiofs_x, int roiofs_y, const float *lut, int *xmap, float *dbuf, Mat& Dx, Mat& Dy, Mat& Angle, Mat& Mag, uchar* grad_data, int grad_step_p0, uchar* qangle_data, int qangle_step_p0, int it_2_size, int it_2_nplanes, int Dx_depth, int Dx_channels) const;
+    CV_WRAP virtual void computeGradient_kernel(const Mat& img, CV_OUT Mat& grad, CV_OUT Mat& angleOfs, Size* size_ptr, Point& , Size paddingTL=Size(), Size paddingBR=Size() ) const;
 
     CV_WRAP static vector<float> getDefaultPeopleDetector();
     CV_WRAP static vector<float> getDaimlerPeopleDetector();
@@ -427,173 +277,66 @@ void HOGDescriptor2::copyTo(HOGDescriptor2& c) const
 //ACCPOT - Convolution sort of structure or an accelerator
 //void HOGDescriptor2::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
 //                                    Size paddingTL, Size paddingBR) const
-void HOGDescriptor2::computeGradient_kernel(const uchar* img_data, int img_step, Mat& grad, Mat& qangle, int paddingTL_width, int paddingTL_height, int paddingBR_width, int paddingBR_height, int gradsize_width, int gradsize_height, int cn, int wholeSize_width, int wholeSize_height, int roiofs_x, int roiofs_y, const float *lut, int *xmap, float *dbuf, Mat& Dx, Mat& Dy, Mat& Angle, Mat& Mag, uchar* grad_data, int grad_step_p0, uchar* qangle_data, int qangle_step_p0, int it_2_size, int it_2_nplanes, int Dx_depth, int Dx_channels) const
+void HOGDescriptor2::computeGradient_kernel(const Mat& img, Mat& grad, Mat& qangle
+                                            , Size* size_ptr, Point& roiofs ,Size paddingTL, Size paddingBR) const
+
+//Size size_ptr[2] = {gradsize,wholeSize};
 {
-    //CV_Assert( img.type() == CV_8U || img.type() == CV_8UC3 ); //Handle This outside
 
-    //Size gradsize(img.cols + paddingTL.width + paddingBR.width,
-    //              img.rows + paddingTL.height + paddingBR.height); //Handle This outside
-    //grad.create(gradsize, CV_32FC2);  // <magnitude*(1-alpha), magnitude*alpha> //Handle This outside //Input to Kernel
-
-    //qangle.create(gradsize, CV_8UC2); // [0..nbins-1] - quantized gradient orientation //Handle This outside  //Input to Kernel
-
-    //Size wholeSize;
-    //Point roiofs;
-    //img.locateROI(wholeSize, roiofs); //Input to Kernel
-
+    img.locateROI(size_ptr[1], roiofs);
 
     int i, x, y;
-    //int cn = img.channels();//Input to Kernel
+    int cn = img.channels();
 
-    //Mat_<float> _lut(1, 256); 
-    //const float* lut = &_lut(0,0); //Input to Kernel
+    Mat_<float> _lut(1, 256);
+    const float* lut = &_lut(0,0);
 
+    if( gammaCorrection )
+        for( i = 0; i < 256; i++ )
+            _lut(0,i) = std::sqrt((float)i);
+    else
+        for( i = 0; i < 256; i++ )
+            _lut(0,i) = (float)i;
 
-    //if( gammaCorrection )
-    //    for( i = 0; i < 256; i++ )
-    //        _lut(0,i) = std::sqrt((float)i); //How do we handle this?When you create the input, handle it then.
-    //else
-    //    for( i = 0; i < 256; i++ )
-    //        _lut(0,i) = (float)i;
-
-    //AutoBuffer<int> mapbuf(gradsize.width + gradsize.height + 4); //Input to Kernel
-
-    //int* xmap = (int*)mapbuf + 1;
-    //int* ymap = xmap + gradsize.width + 2; //Input to Kernel
-    int* ymap = xmap + gradsize_width + 2; 
-
+    AutoBuffer<int> mapbuf(size_ptr[0].width + size_ptr[0].height + 4);
+    int* xmap = (int*)mapbuf + 1;
+    int* ymap = xmap + size_ptr[0].width + 2;
 
     const int borderType = (int)BORDER_REFLECT_101;
 
-    //for( x = -1; x < gradsize.width + 1; x++ ) //Replace with gradsize_width
-    for( x = -1; x < gradsize_width + 1; x++ ) //Replace with gradsize_width
-    {
-        //xmap[x] = borderInterpolate_2(x - paddingTL_width + roiofs_x,
-        //                wholeSize_width, borderType) - roiofs_x; //Most probably this wont be inlined, use /home/urmish/Documents/OpenCV/opencv-2.4.9/modules/imgproc/src/filter.cpp
-	///////////////Border Interpolate//////////////////////////
-	//inline int borderInterpolate_2( int p, int len, int borderType )
-	//{
-	int x_i = x - paddingTL_width + roiofs_x;
-        
-	if( (unsigned)x_i < (unsigned)wholeSize_width )
-	    ;
-	else if( borderType == BORDER_REPLICATE )
-	    x_i = x_i < 0 ? 0 : wholeSize_width - 1;
-	else if( borderType == BORDER_REFLECT || borderType == BORDER_REFLECT_101 )
-	{
-	    int delta = borderType == BORDER_REFLECT_101;
-	    if( wholeSize_width == 1 )
-	        xmap[x] = 0;
-	    do
-	    {
-	        if( x_i < 0 )
-	            x_i = -x_i - 1 + delta;
-	        else
-	            x_i = wholeSize_width - 1 - (x_i - wholeSize_width) - delta;
-	    }
-	    while( (unsigned)x_i >= (unsigned)wholeSize_width );
-	}
-	else if( borderType == BORDER_WRAP )
-	{
-	    if( x_i < 0 )
-	        x_i -= ((x_i-wholeSize_width+1)/wholeSize_width)*wholeSize_width;
-	    if( x_i >= wholeSize_width )
-	        x_i %= wholeSize_width;
-	}
-	else if( borderType == BORDER_CONSTANT )
-	    x_i = -1;
-	else
-	 //   CV_Error( CV_StsBadArg, "Unknown/unsupported border type" );
-		;
-	xmap[x] = x_i  - roiofs_x;
-	//return p;
-	//}
-    }	
-	///////////////Border Interpolate Ends//////////////////////////
-
-    //for( y = -1; y < gradsize.height + 1; y++ )
-    for( y = -1; y < gradsize_height + 1; y++ )
-        //ymap[y] = borderInterpolate_2(y - paddingTL_height + roiofs_y,
-        //                wholeSize_height, borderType) - roiofs_y;
-    {
-	///////////////Border Interpolate//////////////////////////
-	//inline int borderInterpolate_2( int p, int len, int borderType )
-	//{
-	int y_i = y - paddingTL_height + roiofs_y;
-        
-	if( (unsigned)y_i < (unsigned)wholeSize_height )
-	    ;
-	else if( borderType == BORDER_REPLICATE )
-	    y_i = y_i < 0 ? 0 : wholeSize_height - 1;
-	else if( borderType == BORDER_REFLECT || borderType == BORDER_REFLECT_101 )
-	{
-	    int delta = borderType == BORDER_REFLECT_101;
-	    if( wholeSize_height == 1 )
-	        ymap[y] = 0;
-	    do
-	    {
-	        if( y_i < 0 )
-	            y_i = -y_i - 1 + delta;
-	        else
-	            y_i = wholeSize_height - 1 - (y_i - wholeSize_height) - delta;
-	    }
-	    while( (unsigned)y_i >= (unsigned)wholeSize_height );
-	}
-	else if( borderType == BORDER_WRAP )
-	{
-	    if( y_i < 0 )
-	        y_i -= ((y_i-wholeSize_height+1)/wholeSize_height)*wholeSize_height;
-	    if( y_i >= wholeSize_height )
-	        y_i %= wholeSize_height;
-	}
-	else if( borderType == BORDER_CONSTANT )
-	    y_i = -1;
-	else
-	   // CV_Error( CV_StsBadArg, "Unknown/unsupported border type" );
-		;
-	ymap[y] = y_i  - roiofs_y;
-	//return p;
-	//}
-    }	
-	///////////////Border Interpolate Ends//////////////////////////
-
+    for( x = -1; x < size_ptr[0].width + 1; x++ )
+        xmap[x] = borderInterpolate(x - paddingTL.width + roiofs.x,
+                        size_ptr[1].width, borderType) - roiofs.x;
+    for( y = -1; y < size_ptr[0].height + 1; y++ )
+        ymap[y] = borderInterpolate(y - paddingTL.height + roiofs.y,
+                        size_ptr[1].height, borderType) - roiofs.y;
 
     // x- & y- derivatives for the whole row
-    //int width = gradsize.width;
-    //AutoBuffer<float> _dbuf(width*4); //Input to kernel
-    //float* dbuf = _dbuf;
-    int width = gradsize_width;
-    //Mat Dx(1, width, CV_32F, dbuf); //Input to kernel
-    //Mat Dy(1, width, CV_32F, dbuf + width); //Input to kernel
-    //Mat Mag(1, width, CV_32F, dbuf + width*2); //Input to kernel
-    //Mat Angle(1, width, CV_32F, dbuf + width*3); //Input to kernel
+    int width = size_ptr[0].width;
+    AutoBuffer<float> _dbuf(width*4);
+    float* dbuf = _dbuf;
+    Mat Dx(1, width, CV_32F, dbuf);
+    Mat Dy(1, width, CV_32F, dbuf + width);
+    Mat Mag(1, width, CV_32F, dbuf + width*2);
+    Mat Angle(1, width, CV_32F, dbuf + width*3);
 
     int _nbins = nbins;
     float angleScale = (float)(_nbins/CV_PI);
-    //Accelerator could start somewhere from here. May be a function call
-    //for( y = 0; y < gradsize.height; y++ ) //Input to kernel
-    for( y = 0; y < gradsize_height; y++ ) //Input to kernel
+    for( y = 0; y < size_ptr[0].height; y++ )
     {
-        //const uchar* imgPtr  = img.data + img.step*ymap[y]; //Need data and step value
-        //const uchar* prevPtr = img.data + img.step*ymap[y-1]; //Need ymap ptr
-        //const uchar* nextPtr = img.data + img.step*ymap[y+1];
-        const uchar* imgPtr  = img_data + img_step*ymap[y]; //Need data and step value
-        const uchar* prevPtr = img_data + img_step*ymap[y-1]; //Need ymap ptr
-        const uchar* nextPtr = img_data + img_step*ymap[y+1];
-        //float* gradPtr = (float*)grad.ptr(y); //Need Grad ptr
-        //uchar* qanglePtr = (uchar*)qangle.ptr(y);// Need qangle ptr
-        float* gradPtr = (float*) (grad_data + grad_step_p0*y); //Need Grad ptr
-        uchar* qanglePtr = (uchar*)(qangle_data + qangle_step_p0*y);// Need qangle ptr
+        const uchar* imgPtr  = img.data + img.step*ymap[y];
+        const uchar* prevPtr = img.data + img.step*ymap[y-1];
+        const uchar* nextPtr = img.data + img.step*ymap[y+1];
+        float* gradPtr = (float*)grad.ptr(y);
+        uchar* qanglePtr = (uchar*)qangle.ptr(y);
 
         if( cn == 1 )
         {
             for( x = 0; x < width; x++ )
             {
-    		printf ("Here 2\n");
                 int x1 = xmap[x];
-                dbuf[x] = (float)(lut[imgPtr[xmap[x+1]]] - lut[imgPtr[xmap[x-1]]]); //Need dbuf pointer
+                dbuf[x] = (float)(lut[imgPtr[xmap[x+1]]] - lut[imgPtr[xmap[x-1]]]);
                 dbuf[width + x] = (float)(lut[nextPtr[x1]] - lut[prevPtr[x1]]);
-    		printf ("Here 2 Ends\n");
             }
         }
         else
@@ -605,7 +348,7 @@ void HOGDescriptor2::computeGradient_kernel(const uchar* img_data, int img_step,
                 const uchar* p2 = imgPtr + xmap[x+1]*3;
                 const uchar* p0 = imgPtr + xmap[x-1]*3;
 
-                dx0 = lut[p2[2]] - lut[p0[2]]; //Need lut pointer
+                dx0 = lut[p2[2]] - lut[p0[2]];
                 dy0 = lut[nextPtr[x1+2]] - lut[prevPtr[x1+2]];
                 mag0 = dx0*dx0 + dy0*dy0;
 
@@ -634,74 +377,11 @@ void HOGDescriptor2::computeGradient_kernel(const uchar* img_data, int img_step,
                 dbuf[x+width] = dy0;
             }
         }
-        //cartToPolar_2( Dx, Dy, Mag, Angle, false ); //Inline the function, replace this 
-	//////////////////////////////////////////////CARTTOPOLAR BEGINS////////////////////////////////////////////////////
-	//void cartToPolar_2( InputArray src1, InputArray src2,
-        //          OutputArray dst1, OutputArray dst2, bool angleInDegrees )
-			//Mat X = Dx, Y = Dy;
-			//int type = Dx.type(), depth = Dx.depth(), cn = Dx.channels(); //Need these
-			int depth = Dx_depth, cn = Dx_channels; //Need these
-			//CV_Assert( Dx.size == Dy.size && type == Dy.type() && (depth == CV_32F || depth == CV_64F));
-			//dst1.create( Dx.dims, Dx.size, type );
-			//dst2.create( Dx.dims, Dx.size, type );
-			//Mat Mag = dst1.getMat(), Angle = dst2.getMat();
-			
-			//const Mat* arrays[] = {&Dx, &Dy, &Mag, &Angle, 0}; //Need this
-			uchar* ptrs_2[4];
-			//NAryMatIterator it_2(arrays, ptrs_2); //Need this
-			cv::AutoBuffer<float> _buf_2;
-			float* buf_2[2] = {0, 0};
-			//int j, k, total = (int)(it_2.size*cn), blockSize = std::min(total, ((BLOCK_SIZE+cn-1)/cn)*cn); //Change This
-			int j, k, total = (int)(it_2_size*cn), blockSize = std::min(total, ((BLOCK_SIZE+cn-1)/cn)*cn); //Change This
-			size_t esz1 = Dx.elemSize1();
-			
-			if( depth == CV_64F )
-			{
-			    _buf_2.allocate(blockSize*2);
-			    buf_2[0] = _buf_2;
-			    buf_2[1] = buf_2[0] + blockSize;
-			}
-			
-			//for( size_t i = 0; i < it_2.nplanes; i++, ++it_2 )
-			for( int i = 0; i < it_2_nplanes; i++, ++it_2 )
-			{
-			    for( j = 0; j < total; j += blockSize )
-			    {
-			        int len = std::min(total - j, blockSize);
-			        if( depth == CV_32F )
-			        {
-			            const float *x = (const float*)ptrs_2[0], *y = (const float*)ptrs_2[1];
-			            float *mag = (float*)ptrs_2[2], *angle = (float*)ptrs_2[3];
-			            Magnitude_2_32f( x, y, mag, len );
-			            FastAtan2_2_32f( y, x, angle, len, false );
-			        }
-			        else
-			        {
-			            const double *x = (const double*)ptrs_2[0], *y = (const double*)ptrs_2[1];
-			            double *angle = (double*)ptrs_2[3];
-			
-			            Magnitude_2_64f(x, y, (double*)ptrs_2[2], len);
-			            for( k = 0; k < len; k++ )
-			            {
-			                buf_2[0][k] = (float)x[k];
-			                buf_2[1][k] = (float)y[k];
-			            }
-			
-			            FastAtan2_2_32f( buf_2[1], buf_2[0], buf_2[0], len, false );
-			            for( k = 0; k < len; k++ )
-			                angle[k] = buf_2[0][k];
-			        }
-			        ptrs_2[0] += len*esz1;
-			        ptrs_2[1] += len*esz1;
-			        ptrs_2[2] += len*esz1;
-			        ptrs_2[3] += len*esz1;
-			    }
-			}
-	//////////////////////////////////////////////CARTTOPOLAR ENDS////////////////////////////////////////////////////
+        cartToPolar( Dx, Dy, Mag, Angle, false );
         for( x = 0; x < width; x++ )
         {
             float mag = dbuf[x+width*2], angle = dbuf[x+width*3]*angleScale - 0.5f;
-            int hidx = cvFloor(angle); //Replace this, make it inline
+            int hidx = cvFloor(angle);
             angle -= hidx;
             gradPtr[x*2] = mag*(1.f - angle);
             gradPtr[x*2+1] = mag*angle;
@@ -792,43 +472,17 @@ void HOGCache2::init(const HOGDescriptor2* _descriptor,
     cacheStride = _cacheStride;
     useCache = _useCache;
 
-    //descriptor->computeGradient(_img, grad, qangle, _paddingTL, _paddingBR);
-    /////////////////////Data Marshalling Starts Here/////////////////////////////
-    CV_Assert( _img.type() == CV_8U || _img.type() == CV_8UC3 ); //Handle This outside
+    //descriptor->computeGradient_kernel(_img, grad, qangle, _paddingTL, _paddingBR);
     Size gradsize(_img.cols + _paddingTL.width + _paddingBR.width,
-                  _img.rows + _paddingTL.height + _paddingBR.height); //Handle This outside
-    grad.create(gradsize, CV_32FC2);  // <magnitude*(1-alpha), magnitude*alpha> 
-
-    qangle.create(gradsize, CV_8UC2); // [0..nbins-1] - quantized gradient orientation 
-    int cn = _img.channels();
+                  _img.rows + _paddingTL.height + _paddingBR.height);
+    grad.create(gradsize, CV_32FC2);  // <magnitude*(1-alpha), magnitude*alpha>
+    qangle.create(gradsize, CV_8UC2); // [0..nbins-1] - quantized gradient orientation
+    
+    CV_Assert( _img.type() == CV_8U || _img.type() == CV_8UC3 );
     Size wholeSize;
+    Size size_ptr[2] = {gradsize,wholeSize};
     Point roiofs;
-    _img.locateROI(wholeSize, roiofs); //Input to Kernel
-    Mat_<float> _lut(1, 256); 
-    const float* lut = &_lut(0,0); //Input to Kernel    if( gammaCorrection )
-    if( descriptor->gammaCorrection )
-    	for(int i = 0; i < 256; i++ )
-		_lut(0,i) = std::sqrt((float)i); //How do we handle this?When you create the input, handle it then.
-    else
-    	for( int i = 0; i < 256; i++ )
-		_lut(0,i) = (float)i;
-
-    AutoBuffer<int> mapbuf(gradsize.width + gradsize.height + 4); //Input to Kernel
-    int* xmap = (int*)mapbuf + 1;
-
-    int width = gradsize.width;
-    AutoBuffer<float> _dbuf(width*4); //Input to kernel
-    float* dbuf = _dbuf;
-    Mat Dx(1, width, CV_32F, dbuf); //Input to kernel
-    Mat Dy(1, width, CV_32F, dbuf + width); //Input to kernel
-    Mat Mag(1, width, CV_32F, dbuf + width*2); //Input to kernel
-    Mat Angle(1, width, CV_32F, dbuf + width*3); //Input to kernel
-    CV_Assert( Dx.size == Dy.size && Dx.type() == Dy.type() && (depth == CV_32F || depth == CV_64F));
-    const Mat* arrays[] = {&Dx, &Dy, &Mag, &Angle, 0}; //Need this
-    uchar* ptrs_2[4];
-    NAryMatIterator it_2(arrays, ptrs_2); //Need this
-    descriptor->computeGradient_kernel(_img.data, _img.step, grad, qangle, _paddingTL.width,_paddingTL.height, _paddingBR.width,_paddingBR.height,gradsize.width, gradsize.height, cn, wholeSize.width, wholeSize.height, roiofs.x, roiofs.y, lut, xmap, dbuf,Dx , Dy, Angle, Mag, grad.data, grad.step.p[0], qangle.data, qangle.step.p[0], it_2.size(),it_2.nplanes,Dx.depth(),Dx.channels());
-    /////////////////////////////Marshalling Ends Here///////////////////////////////
+    descriptor->computeGradient_kernel(_img, grad, qangle, size_ptr, roiofs , _paddingTL, _paddingBR);
     imgoffset = _paddingTL;
 
     winSize = descriptor->winSize;
@@ -859,7 +513,6 @@ void HOGCache2::init(const HOGDescriptor2* _descriptor,
     float sigma = (float)descriptor->getWinSigma();
     float scale = 1.f/(sigma*sigma*2);
 
-    //Creating Gaussian Filter for voting
     for(i = 0; i < blockSize.height; i++)
         for(j = 0; j < blockSize.width; j++)
         {
@@ -1224,7 +877,7 @@ void HOGDescriptor2::detect(const Mat& img,
     padding.height = (int)alignSize(std::max(padding.height, 0), cacheStride.height);
     Size paddedImgSize(img.cols + padding.width*2, img.rows + padding.height*2);
 
-    HOGCache2 cache(this, img, padding, padding, nwindows == 0, cacheStride); //calls computeGradient
+    HOGCache2 cache(this, img, padding, padding, nwindows == 0, cacheStride);
 
     if( !nwindows )
         nwindows = cache.windowsInImage(paddedImgSize, winStride).area();
@@ -1232,7 +885,6 @@ void HOGDescriptor2::detect(const Mat& img,
     const HOGCache2::BlockData* blockData = &cache.blockData[0];
 
     int nblocks = cache.nblocks.area();
-    //printf("nblocks is %d \n",nblocks);
     int blockHistogramSize = cache.blockHistogramSize;
     size_t dsize = getDescriptorSize();
 
@@ -1292,7 +944,6 @@ public:
                 const double* _levelScale, std::vector<Rect> * _vec, Mutex* _mtx,
                 std::vector<double>* _weights=0, std::vector<double>* _scales=0 )
     {
-	//printf("In constructor\n");
         hog = _hog;
         img = _img;
         hitThreshold = _hitThreshold;
@@ -1310,7 +961,6 @@ public:
     }
     void my_operator( const Range& range ) const
     {
-	//printf("In operator call\n");
         int i, i1 = range.start, i2 = range.end;
 	//printf("Range is %d - %d\n",i1,i2);
         double minScale = i1 > 0 ? levelScale[i1] : i2 > 1 ? levelScale[i1+1] : std::max(img.cols, img.rows);
@@ -1328,7 +978,7 @@ public:
                 smallerImg = Mat(sz, img.type(), img.data, img.step);
             else
                 resize(img, smallerImg, sz);
-            hog->detect(smallerImg, locations, hitsWeights, hitThreshold, winStride, padding); //callsComputeGradient
+            hog->detect(smallerImg, locations, hitsWeights, hitThreshold, winStride, padding);
             Size scaledWinSize = Size(cvRound(hog->winSize.width*scale), cvRound(hog->winSize.height*scale));
 
             mtx->lock();
