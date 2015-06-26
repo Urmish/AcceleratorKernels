@@ -249,7 +249,7 @@ public:
 
     //CV_WRAP virtual void computeGradient(const Mat& img, CV_OUT Mat& grad, CV_OUT Mat& angleOfs,
     //                             Size paddingTL=Size(), Size paddingBR=Size()) const;
-    CV_WRAP virtual void computeGradient_kernel(const Mat& img, CV_OUT Mat& grad, CV_OUT Mat& angleOfs, Size* size_ptr, Point& , const float* lut, float* dbuf, Mat& Dx, Mat& Dy, Mat& Mag, Mat& Angle, int* xmap, Size paddingTL=Size(), Size paddingBR=Size() ) const;
+    CV_WRAP virtual void computeGradient_kernel(const Mat& img, Size* size_ptr, Point& , const float* lut, float* dbuf, Mat& Dx, Mat& Dy, Mat& Mag, Mat& Angle, int* xmap,int cn, uchar** data_ptr, int* step_ptr,Size paddingTL=Size(), Size paddingBR=Size() ) const;
 
     CV_WRAP static vector<float> getDefaultPeopleDetector();
     CV_WRAP static vector<float> getDaimlerPeopleDetector();
@@ -428,17 +428,19 @@ void HOGDescriptor2::copyTo(HOGDescriptor2& c) const
 //ACCPOT - Convolution sort of structure or an accelerator
 //void HOGDescriptor2::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
 //                                    Size paddingTL, Size paddingBR) const
-void HOGDescriptor2::computeGradient_kernel(const Mat& img, Mat& grad, Mat& qangle
-                                            , Size* size_ptr, Point& roiofs ,const float* lut,
-					    float* dbuf, Mat& Dx, Mat& Dy, Mat& Mag, Mat& Angle,int* xmap, Size paddingTL, Size paddingBR) const
+void HOGDescriptor2::computeGradient_kernel(const Mat& img ,Size* size_ptr, Point& roiofs ,
+                                            const float* lut, float* dbuf, Mat& Dx, Mat& Dy, 
+                                            Mat& Mag, Mat& Angle,int* xmap, int cn, 
+                                            uchar** data_ptr, int* step_ptr,Size paddingTL, 
+                                            Size paddingBR) const
 
 //Size size_ptr[2] = {gradsize,wholeSize};
+//uchar* data_ptr[2] = {grad.data, qangle.data } ;
+//int step_ptr[2] = { grad.step.p[0],  qangle.step.p[0] };
 {
 
-    img.locateROI(size_ptr[1], roiofs);
 
     int x, y;
-    int cn = img.channels();
 
     int* ymap = xmap + size_ptr[0].width + 2;
 
@@ -532,8 +534,8 @@ void HOGDescriptor2::computeGradient_kernel(const Mat& img, Mat& grad, Mat& qang
         const uchar* imgPtr  = img.data + img.step*ymap[y];
         const uchar* prevPtr = img.data + img.step*ymap[y-1];
         const uchar* nextPtr = img.data + img.step*ymap[y+1];
-        float* gradPtr = (float*)grad.ptr(y);
-        uchar* qanglePtr = (uchar*)qangle.ptr(y);
+        float* gradPtr = (float*) (data_ptr[0] + step_ptr[0]*y); //Need Grad ptr
+        uchar* qanglePtr = (uchar*)(data_ptr[1] + step_ptr[1]*y);// Need qangle ptr
 
         if( cn == 1 )
         {
@@ -706,7 +708,11 @@ void HOGCache2::init(const HOGDescriptor2* _descriptor,
     Mat Angle(1, width, CV_32F, dbuf + width*3);
     AutoBuffer<int> mapbuf(size_ptr[0].width + size_ptr[0].height + 4);
     int* xmap = (int*)mapbuf + 1;
-    descriptor->computeGradient_kernel(_img, grad, qangle, size_ptr, roiofs ,lut, dbuf, Dx, Dy, Mag, Angle, xmap, _paddingTL, _paddingBR );
+    int cn = _img.channels();
+    _img.locateROI(size_ptr[1], roiofs);
+    uchar* data_ptr[2] = {grad.data, qangle.data } ;
+    int   step_ptr[2] = { grad.step.p[0],  qangle.step.p[0] };
+    descriptor->computeGradient_kernel(_img, size_ptr, roiofs ,lut, dbuf, Dx, Dy, Mag, Angle, xmap, cn, data_ptr, step_ptr, _paddingTL, _paddingBR );
     imgoffset = _paddingTL;
 
     winSize = descriptor->winSize;
