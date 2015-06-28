@@ -12,7 +12,236 @@ using namespace cv;
 using namespace std;
 
 #define My_Round(x) (((x) >= (int)(x)+0.5)? (int)(x)+1:(int)(x))
+#define my_abs(x) ((x) >= 0?(x):(-1)*(x))
 
+
+float fast_sqrt(float number) 
+{
+   long i;
+   float x2, y;
+   const float threehalfs = 1.5F;
+
+   x2 = number * 0.5F;
+   y  = number;
+   i  = * ( long * ) &y;                     // floating point bit level hacking [sic]
+   i  = 0x5f3759df - ( i >> 1 );             // Newton's approximation
+   y  = * ( float * ) &i;
+   y  = y * ( threehalfs - ( x2 * y * y ) ); // 1st iteration
+   y  = y * ( threehalfs - ( x2 * y * y ) ); // 2nd iteration
+   y  = y * ( threehalfs - ( x2 * y * y ) ); // 3rd iteration
+
+   return 1/y;
+}
+
+
+class CV_EXPORTS NAryMatIterator_2
+{
+public:
+    //! the default constructor
+    NAryMatIterator_2();
+    //! the full constructor taking arbitrary number of n-dim matrices
+    NAryMatIterator_2(const Mat** arrays, uchar** ptrs, int narrays=-1);
+    //! the full constructor taking arbitrary number of n-dim matrices
+    NAryMatIterator_2(const Mat** arrays, Mat* planes, int narrays=-1);
+    //! the separate iterator initialization method
+    void init(const Mat** arrays, Mat* planes, uchar** ptrs, int narrays=-1);
+
+    //! proceeds to the next plane of every iterated matrix
+    NAryMatIterator_2& operator ++();
+    //! proceeds to the next plane of every iterated matrix (postfix increment operator)
+    NAryMatIterator_2 operator ++(int);
+
+    //! the iterated arrays
+    const Mat** arrays;
+    //! the current planes
+    Mat* planes;
+    //! data pointers
+    uchar** ptrs;
+    //! the number of arrays
+    int narrays;
+    //! the number of hyper-planes that the iterator steps through
+    size_t nplanes;
+    //! the size of each segment (in elements)
+    size_t size;
+protected:
+    int iterdepth;
+    size_t idx;
+};
+
+NAryMatIterator_2::NAryMatIterator_2()
+    : arrays(0), planes(0), ptrs(0), narrays(0), nplanes(0), size(0), iterdepth(0), idx(0)
+{
+}
+
+NAryMatIterator_2::NAryMatIterator_2(const Mat** _arrays, Mat* _planes, int _narrays)
+: arrays(0), planes(0), ptrs(0), narrays(0), nplanes(0), size(0), iterdepth(0), idx(0)
+{
+    init(_arrays, _planes, 0, _narrays);
+}
+
+NAryMatIterator_2::NAryMatIterator_2(const Mat** _arrays, uchar** _ptrs, int _narrays)
+    : arrays(0), planes(0), ptrs(0), narrays(0), nplanes(0), size(0), iterdepth(0), idx(0)
+{
+    init(_arrays, 0, _ptrs, _narrays);
+}
+
+void NAryMatIterator_2::init(const Mat** _arrays, Mat* _planes, uchar** _ptrs, int _narrays)
+{
+    CV_Assert( _arrays && (_ptrs || _planes) );
+    int i, j, d1=0, i0 = -1, d = -1;
+
+    arrays = _arrays;
+    ptrs = _ptrs;
+    planes = _planes;
+    narrays = _narrays;
+    nplanes = 0;
+    size = 0;
+
+    if( narrays < 0 )
+    {
+        for( i = 0; _arrays[i] != 0; i++ )
+            ;
+        narrays = i;
+        CV_Assert(narrays <= 1000);
+    }
+
+    iterdepth = 0;
+
+    for( i = 0; i < narrays; i++ )
+    {
+        CV_Assert(arrays[i] != 0);
+        const Mat& A = *arrays[i];
+        if( ptrs )
+            ptrs[i] = A.data;
+
+        if( !A.data )
+            continue;
+
+        if( i0 < 0 )
+        {
+            i0 = i;
+            d = A.dims;
+
+            // find the first dimensionality which is different from 1;
+            // in any of the arrays the first "d1" step do not affect the continuity
+            for( d1 = 0; d1 < d; d1++ )
+                if( A.size[d1] > 1 )
+                    break;
+        }
+        else
+            CV_Assert( A.size == arrays[i0]->size );
+
+        if( !A.isContinuous() )
+        {
+            CV_Assert( A.step[d-1] == A.elemSize() );
+            for( j = d-1; j > d1; j-- )
+                if( A.step[j]*A.size[j] < A.step[j-1] )
+                    break;
+            iterdepth = std::max(iterdepth, j);
+        }
+    }
+
+    if( i0 >= 0 )
+    {
+        size = arrays[i0]->size[d-1];
+        for( j = d-1; j > iterdepth; j-- )
+        {
+            int64 total1 = (int64)size*arrays[i0]->size[j-1];
+            if( total1 != (int)total1 )
+                break;
+            size = (int)total1;
+        }
+
+        iterdepth = j;
+        if( iterdepth == d1 )
+            iterdepth = 0;
+
+        nplanes = 1;
+        for( j = iterdepth-1; j >= 0; j-- )
+            nplanes *= arrays[i0]->size[j];
+    }
+    else
+        iterdepth = 0;
+
+    idx = 0;
+
+    if( !planes )
+        return;
+
+    for( i = 0; i < narrays; i++ )
+    {
+        CV_Assert(arrays[i] != 0);
+        const Mat& A = *arrays[i];
+
+        if( !A.data )
+        {
+            planes[i] = Mat();
+            continue;
+        }
+
+        planes[i] = Mat(1, (int)size, A.type(), A.data);
+    }
+}
+
+
+NAryMatIterator_2& NAryMatIterator_2::operator ++()
+{
+    if( idx >= nplanes-1 )
+        return *this;
+    ++idx;
+
+    if( iterdepth == 1 )
+    {
+        if( ptrs )
+        {
+            for( int i = 0; i < narrays; i++ )
+            {
+                if( !ptrs[i] )
+                    continue;
+                ptrs[i] = arrays[i]->data + arrays[i]->step[0]*idx;
+            }
+        }
+        if( planes )
+        {
+            for( int i = 0; i < narrays; i++ )
+            {
+                if( !planes[i].data )
+                    continue;
+                planes[i].data = arrays[i]->data + arrays[i]->step[0]*idx;
+            }
+        }
+    }
+    else
+    {
+        for( int i = 0; i < narrays; i++ )
+        {
+            const Mat& A = *arrays[i];
+            if( !A.data )
+                continue;
+            int _idx = (int)idx;
+            uchar* data = A.data;
+            for( int j = iterdepth-1; j >= 0 && _idx > 0; j-- )
+            {
+                int szi = A.size[j], t = _idx/szi;
+                data += (_idx - t * szi)*A.step[j];
+                _idx = t;
+            }
+            if( ptrs )
+                ptrs[i] = data;
+            if( planes )
+                planes[i].data = data;
+        }
+    }
+
+    return *this;
+}
+
+NAryMatIterator_2 NAryMatIterator_2::operator ++(int)
+{
+    NAryMatIterator_2 it = *this;
+    ++*this;
+    return it;
+}
 
 struct DetectionROI2
 {
@@ -69,7 +298,8 @@ static void Magnitude_2_64f(const double* x, const double* y, double* mag, int l
     for( ; i < len; i++ )
     {
         double x0 = x[i], y0 = y[i];
-        mag[i] = std::sqrt(x0*x0 + y0*y0);
+        //mag[i] = std::sqrt(x0*x0 + y0*y0);
+        mag[i] = fast_sqrt(x0*x0 + y0*y0); 
     }
 }
 static void Magnitude_2_32f(const float* x, const float* y, float* mag, int len)
@@ -79,20 +309,22 @@ static void Magnitude_2_32f(const float* x, const float* y, float* mag, int len)
     for( ; i < len; i++ )
     {
         float x0 = x[i], y0 = y[i];
-        mag[i] = std::sqrt(x0*x0 + y0*y0);
+        //mag[i] = std::sqrt(x0*x0 + y0*y0);
+        mag[i] = fast_sqrt(x0*x0 + y0*y0);
     }
 }
 
-static void FastAtan2_2_32f(const float *Y, const float *X, float *angle, int len, bool angleInDegrees=true )
+static void FastAtan2_2_32f(const float *y, const float *x, float *angle, int len, bool angleInDegrees=true )
 {
-    int i = 0;
-    float scale = angleInDegrees ? 1 : (float)(CV_PI/180);
+    int i_ft = 0;
+    float scale_ft = angleInDegrees ? 1 : (float)(CV_PI/180);
 
 
-    for( ; i < len; i++ )
+    for( ; i_ft < len; i_ft++ )
     {
-        float x = X[i], y = Y[i];
-        float ax = std::abs(x), ay = std::abs(y);
+        float x_ft = x[i_ft], y_ft = y[i_ft];
+        //float ax = std::abs(x), ay = std::abs(y);
+        float ax = my_abs(x_ft), ay = my_abs(y_ft);
         float a, c, c2;
         if( ax >= ay )
         {
@@ -106,66 +338,157 @@ static void FastAtan2_2_32f(const float *Y, const float *X, float *angle, int le
             c2 = c*c;
             a = 90.f - (((atan2_p7*c2 + atan2_p5)*c2 + atan2_p3)*c2 + atan2_p1)*c;
         }
-        if( x < 0 )
+        if( x_ft < 0 )
             a = 180.f - a;
-        if( y < 0 )
+        if( y_ft < 0 )
             a = 360.f - a;
-        angle[i] = (float)(a*scale);
+        angle[i_ft] = (float)(a*scale_ft);
     }
 }
 
-void cartToPolar_2( InputArray src1, InputArray src2,
-                  OutputArray dst1, OutputArray dst2, bool angleInDegrees )
+//void cartToPolar_2( InputArray src1, InputArray src2,
+//                  OutputArray dst1, OutputArray dst2, bool angleInDegrees )
+void cartToPolar_2( Mat& Dx, Mat& Dy,
+                  Mat& Mag, Mat& Angle, bool angleInDegrees, float** buf_cp, size_t* cp_var,uchar** ptrs_cp, NAryMatIterator_2& it_2)
 {
-    Mat X = src1.getMat(), Y = src2.getMat();
-    int type = X.type(), depth = X.depth(), cn = X.channels();
-    CV_Assert( X.size == Y.size && type == Y.type() && (depth == CV_32F || depth == CV_64F));
-    dst1.create( X.dims, X.size, type );
-    dst2.create( X.dims, X.size, type );
-    Mat Mag = dst1.getMat(), Angle = dst2.getMat();
+    int type = Dx.type(), depth_cp = Dx.depth(), cn = Dx.channels();
+    //CV_Assert( Dx.size == Dy.size && type == Dy.type() && (depth_cp == CV_32F || depth_cp == CV_64F));
 
-    const Mat* arrays[] = {&X, &Y, &Mag, &Angle, 0};
+    const Mat* arrays[] = {&Dx, &Dy, &Mag, &Angle, 0};
     uchar* ptrs[4];
-    NAryMatIterator it(arrays, ptrs);
-    cv::AutoBuffer<float> _buf;
-    float* buf[2] = {0, 0};
+    NAryMatIterator_2 it(arrays, ptrs);
     int j, k, total = (int)(it.size*cn), blockSize = std::min(total, ((BLOCK_SIZE+cn-1)/cn)*cn);
-    size_t esz1 = X.elemSize1();
+    size_t esz1 = Dx.elemSize1();
+    //int total = cp_var[0];
+    //int blockSize = cp_var[1];
+    //int esz1 = cp_var[2];
 
-    if( depth == CV_64F )
-    {
-        _buf.allocate(blockSize*2);
-        buf[0] = _buf;
-        buf[1] = buf[0] + blockSize;
-    }
+    //cv::AutoBuffer<float> _buf_cp;
+    //float* buf_cp[2] = {0, 0};
+    //if( depth_cp == CV_64F )
+    //{
+    //    _buf_cp.allocate(blockSize*2);
+    //    buf_cp[0] = _buf_cp;
+    //    buf_cp[1] = buf_cp[0] + blockSize;
+    //}
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
         for( j = 0; j < total; j += blockSize )
         {
             int len = std::min(total - j, blockSize);
-            if( depth == CV_32F )
+            if( depth_cp == CV_32F )
             {
                 const float *x = (const float*)ptrs[0], *y = (const float*)ptrs[1];
                 float *mag = (float*)ptrs[2], *angle = (float*)ptrs[3];
-                Magnitude_2_32f( x, y, mag, len );
-                FastAtan2_2_32f( y, x, angle, len, angleInDegrees );
+    		int i_mag = 0;
+		for( ; i_mag < len; i_mag++ )
+		{
+			float x0 = x[i_mag], y0 = y[i_mag];
+			float number = x0*x0 + y0*y0;
+			long i_fs;
+			float x2, y_fs;
+			const float threehalfs = 1.5F;
+			x2 = number * 0.5F;
+			y_fs  = number;
+			i_fs  = * ( long * ) &y_fs;                     // floating point bit level hacking [sic]
+			i_fs  = 0x5f3759df - ( i_fs >> 1 );             // Newton's approximation
+			y_fs  = * ( float * ) &i_fs;
+			y_fs  = y_fs * ( threehalfs - ( x2 * y_fs * y_fs ) ); // 1st iteration
+			y_fs  = y_fs * ( threehalfs - ( x2 * y_fs * y_fs ) ); // 2nd iteration
+			y_fs  = y_fs * ( threehalfs - ( x2 * y_fs * y_fs ) ); // 3rd iteration
+			mag[i_mag] = 1/y_fs;
+
+                }
+		int i_ft = 0;
+		float scale_ft = angleInDegrees ? 1 : (float)(CV_PI/180);
+		
+		
+		for( ; i_ft < len; i_ft++ )
+		{
+		    float x_ft = x[i_ft], y_ft = y[i_ft];
+		    float ax = my_abs(x_ft), ay = my_abs(y_ft);
+		    float a, c, c2;
+		    if( ax >= ay )
+		    {
+		        c = ay/(ax + (float)DBL_EPSILON);
+		        c2 = c*c;
+		        a = (((atan2_p7*c2 + atan2_p5)*c2 + atan2_p3)*c2 + atan2_p1)*c;
+		    }
+		    else
+		    {
+		        c = ax/(ay + (float)DBL_EPSILON);
+		        c2 = c*c;
+		        a = 90.f - (((atan2_p7*c2 + atan2_p5)*c2 + atan2_p3)*c2 + atan2_p1)*c;
+		    }
+		    if( x_ft < 0 )
+		        a = 180.f - a;
+		    if( y_ft < 0 )
+		        a = 360.f - a;
+		    angle[i_ft] = (float)(a*scale_ft);
+		}
+
             }
             else
             {
                 const double *x = (const double*)ptrs[0], *y = (const double*)ptrs[1];
                 double *angle = (double*)ptrs[3];
 
-                Magnitude_2_64f(x, y, (double*)ptrs[2], len);
+		int i_mag = 0;
+		double* mag_new = (double*)ptrs[2];
+		for( ; i_mag < len; i_mag++ )
+		{
+		    double x0 = x[i_mag], y0 = y[i_mag];
+		    float number = x0*x0 + y0*y0;
+		    long i_fs;
+		    float x2, y_fs;
+		    const float threehalfs = 1.5F;
+		    x2 = number * 0.5F;
+		    y_fs  = number;
+		    i_fs  = * ( long * ) &y_fs;                     // floating point bit level hacking [sic]
+		    i_fs  = 0x5f3759df - ( i_fs >> 1 );             // Newton's approximation
+		    y_fs  = * ( float * ) &i_fs;
+		    y_fs  = y_fs * ( threehalfs - ( x2 * y_fs * y_fs ) ); // 1st iteration
+		    y_fs  = y_fs * ( threehalfs - ( x2 * y_fs * y_fs ) ); // 2nd iteration
+		    y_fs  = y_fs * ( threehalfs - ( x2 * y_fs * y_fs ) ); // 3rd iteration
+		    mag_new[i_mag] = 1/y_fs;
+
+		}
+
                 for( k = 0; k < len; k++ )
                 {
-                    buf[0][k] = (float)x[k];
-                    buf[1][k] = (float)y[k];
+                    buf_cp[0][k] = (float)x[k];
+                    buf_cp[1][k] = (float)y[k];
                 }
-
-                FastAtan2_2_32f( buf[1], buf[0], buf[0], len, angleInDegrees );
+		int i_ft = 0;
+		float scale_ft = angleInDegrees ? 1 : (float)(CV_PI/180);
+		
+		
+		for( ; i_ft < len; i_ft++ )
+		{
+		    float x_ft = buf_cp[0][i_ft], y_ft = buf_cp[1][i_ft];
+		    float ax = my_abs(x_ft), ay = my_abs(y_ft);
+		    float a, c, c2;
+		    if( ax >= ay )
+		    {
+		        c = ay/(ax + (float)DBL_EPSILON);
+		        c2 = c*c;
+		        a = (((atan2_p7*c2 + atan2_p5)*c2 + atan2_p3)*c2 + atan2_p1)*c;
+		    }
+		    else
+		    {
+		        c = ax/(ay + (float)DBL_EPSILON);
+		        c2 = c*c;
+		        a = 90.f - (((atan2_p7*c2 + atan2_p5)*c2 + atan2_p3)*c2 + atan2_p1)*c;
+		    }
+		    if( x_ft < 0 )
+		        a = 180.f - a;
+		    if( y_ft < 0 )
+		        a = 360.f - a;
+		    buf_cp[0][i_ft] = (float)(a*scale_ft);
+		}
                 for( k = 0; k < len; k++ )
-                    angle[k] = buf[0][k];
+                    angle[k] = buf_cp[0][k];
             }
             ptrs[0] += len*esz1;
             ptrs[1] += len*esz1;
@@ -252,7 +575,7 @@ public:
 
     //CV_WRAP virtual void computeGradient(const Mat& img, CV_OUT Mat& grad, CV_OUT Mat& angleOfs,
     //                             Size paddingTL=Size(), Size paddingBR=Size()) const;
-    CV_WRAP virtual void computeGradient_kernel(Size* size_ptr, Point& , const float* lut, float* dbuf, Mat& Dx, Mat& Dy, Mat& Mag, Mat& Angle, int* xmap,int cn, uchar** data_ptr, int* step_ptr,Size paddingTL=Size(), Size paddingBR=Size() ) const;
+    CV_WRAP virtual void computeGradient_kernel(Size* size_ptr, Point& , const float* lut, float* dbuf, Mat& Dx, Mat& Dy, Mat& Mag, Mat& Angle, int* xmap,int cn, uchar** data_ptr, int* step_ptr,float** buf_cp,size_t* cp_var,uchar** ptrs_cp, NAryMatIterator_2& it, Size paddingTL=Size(), Size paddingBR=Size() ) const;
 
     CV_WRAP static vector<float> getDefaultPeopleDetector();
     CV_WRAP static vector<float> getDaimlerPeopleDetector();
@@ -434,8 +757,7 @@ void HOGDescriptor2::copyTo(HOGDescriptor2& c) const
 void HOGDescriptor2::computeGradient_kernel(Size* size_ptr, Point& roiofs ,
                                             const float* lut, float* dbuf, Mat& Dx, Mat& Dy, 
                                             Mat& Mag, Mat& Angle,int* xmap, int cn, 
-                                            uchar** data_ptr, int* step_ptr,Size paddingTL, 
-                                            Size paddingBR) const
+                                            uchar** data_ptr, int* step_ptr,float** buf_cp, size_t* cp_var, uchar** ptrs_cp, NAryMatIterator_2& it,Size paddingTL, Size paddingBR) const
 
 //Size size_ptr[2] = {gradsize,wholeSize};
 //uchar* data_ptr[3] = {grad.data, qangle.data,_img.data } ;
@@ -590,7 +912,7 @@ void HOGDescriptor2::computeGradient_kernel(Size* size_ptr, Point& roiofs ,
                 dbuf[x+width] = dy0;
             }
         }
-        cartToPolar_2( Dx, Dy, Mag, Angle, false );
+        cartToPolar_2( Dx, Dy, Mag, Angle, false,buf_cp,cp_var,ptrs_cp,it );
         for( x = 0; x < width; x++ )
         {
             float mag = dbuf[x+width*2], angle = dbuf[x+width*3]*angleScale - 0.5f;
@@ -722,7 +1044,23 @@ void HOGCache2::init(const HOGDescriptor2* _descriptor,
     _img.locateROI(size_ptr[1], roiofs);
     uchar* data_ptr[3] = {grad.data, qangle.data,_img.data } ;
     int   step_ptr[3] = { grad.step.p[0],  qangle.step.p[0], _img.step };
-    descriptor->computeGradient_kernel(size_ptr, roiofs ,lut, dbuf, Dx, Dy, Mag, Angle, xmap, cn, data_ptr, step_ptr, _paddingTL, _paddingBR );
+
+    const Mat* arrays[] = {&Dx, &Dy, &Mag, &Angle, 0};
+    uchar* ptrs_cp[4];
+    NAryMatIterator_2 it(arrays, ptrs_cp);
+
+    int total_cp = (int)(it.size*cn), blockSize_cp = std::min(total_cp, ((BLOCK_SIZE+cn-1)/cn)*cn);
+    size_t esz1_cp = Dx.elemSize1();
+    cv::AutoBuffer<float> _buf_cp;
+    float* buf_cp[2] = {0, 0};
+    if( Dx.depth() == CV_64F )
+    {
+        _buf_cp.allocate(blockSize_cp*2);
+        buf_cp[0] = _buf_cp;
+        buf_cp[1] = buf_cp[0] + blockSize_cp;
+    }
+    size_t cp_var[3] = {total_cp,blockSize_cp, (int)esz1_cp};
+    descriptor->computeGradient_kernel(size_ptr, roiofs ,lut, dbuf, Dx, Dy, Mag, Angle, xmap, cn, data_ptr, step_ptr,buf_cp,cp_var,ptrs_cp,it, _paddingTL, _paddingBR );
     imgoffset = _paddingTL;
 
     winSize = descriptor->winSize;
